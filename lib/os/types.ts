@@ -12,6 +12,7 @@ export interface OrderFilters {
   search?: string;
   limit?: number;
   pipeline?: boolean;
+  days?: number;
 }
 
 export interface OverviewResponse {

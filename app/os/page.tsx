@@ -43,173 +43,166 @@ export default function DashboardHomePage() {
         load(range);
     }, [range]);
 
-    const sourceData = useMemo(
-        () =>
-            Object.entries(data?.stats.source_breakdown || {}).map(([name, value]) => ({
-                name,
-                value,
-            })),
-        [data]
-    );
-
-    const topPerfumes = data?.stats.top_perfumes || [];
-    const topCities = data?.stats.top_cities || [];
-
     const stats = data?.stats;
 
+    if (loading) return <LoadingState label="Synchronisation du cockpit..." />;
+    if (error) return <ErrorState message={error} onRetry={() => load(range)} />;
+
     return (
-        <div className="os-page animate-fade-in">
+        <div className="os-page animate-fade-in" style={{ paddingBottom: 60 }}>
             <PageHeader
-                title="Centre de Pilotage ELIE OS"
-                subtitle="Vue consolidée de votre activité opérationnelle en temps réel"
+                title="Tableau de Bord Stratégique"
+                subtitle="Pilotage opérationnel de la Maison ELIE"
                 actions={
-                    <>
-                        <div style={{ display: 'flex', gap: 6, background: 'var(--surface-2)', padding: 4, borderRadius: 10 }}>
-                            <button
-                                type="button"
-                                onClick={() => setRange(7)}
-                                className="btn-ghost"
-                                style={{ height: 34, padding: '0 12px', background: range === 7 ? 'var(--surface)' : 'transparent' }}
-                            >
-                                7 jours
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setRange(30)}
-                                className="btn-ghost"
-                                style={{ height: 34, padding: '0 12px', background: range === 30 ? 'var(--surface)' : 'transparent' }}
-                            >
-                                30 jours
-                            </button>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                        <div style={{ display: 'flex', gap: 4, background: 'var(--surface)', padding: 4, borderRadius: 14, border: '1px solid var(--border)' }}>
+                            {[7, 30].map((d) => (
+                                <button
+                                    key={d}
+                                    type="button"
+                                    onClick={() => setRange(d as 7 | 30)}
+                                    className={`btn-xs ${range === d ? 'btn-primary' : ''}`}
+                                    style={{ borderRadius: 10, padding: '6px 16px', fontWeight: 800 }}
+                                >
+                                    {d} j
+                                </button>
+                            ))}
                         </div>
-                        <button type="button" className="btn-ghost" onClick={() => load(range)} style={{ width: 40, height: 40, padding: 0 }}>
+                        <button type="button" className="btn-ghost" onClick={() => load(range)} style={{ width: 40, height: 40, padding: 0, borderRadius: 14 }}>
                             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
                         </button>
-                    </>
+                    </div>
                 }
             />
 
-            {/* Executive Hero Section */}
-            <div className="luxury-card" style={{
-                marginBottom: 40,
-                padding: '48px 40px',
-                background: 'linear-gradient(135deg, var(--surface-1) 0%, var(--bg) 100%)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-            }}>
-                <div style={{ maxWidth: '640px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-                        <div className="surface-pill" style={{ color: 'var(--gold)', borderColor: 'var(--gold-border)', background: 'var(--gold-glow)' }}>
-                            CENTRE DE PILOTAGE STRATÉGIQUE
+            {/* Primary Executive Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 24, marginBottom: 32 }}>
+                <div className="luxury-card" style={{ padding: 40, background: 'var(--surface)', borderLeft: '4px solid var(--gold)' }}>
+                    <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-dim)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 20 }}>Performance du Jour</div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 16 }}>
+                        <div style={{ fontSize: 48, fontWeight: 950, letterSpacing: '-0.03em', color: 'var(--text)' }}>
+                            {(data?.todayRevenue ?? 0).toLocaleString('fr-MA')} <span style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-muted)' }}>MAD</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-dim)', fontSize: 10, fontWeight: 800, letterSpacing: '0.05em' }}>
-                            <Shield size={12} /> SÉCURISÉ
+                        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--success)', background: 'var(--success-soft)', padding: '4px 12px', borderRadius: 10 }}>
+                            Direct Cash
                         </div>
                     </div>
-
-                    <h1 style={{ fontSize: 36, fontWeight: 900, color: 'var(--text)', marginBottom: 12, letterSpacing: '-0.03em' }}>
-                        Bonjour, <span className="luxury-text-gradient">Admin Elie</span>
-                    </h1>
-                    <p style={{ color: 'var(--text-muted)', fontSize: 15, fontWeight: 500, lineHeight: 1.7 }}>
-                        Votre écosystème de commerce de luxe est stable. L'activité opérationnelle est sous contrôle. Vos rapports consolidés sont prêts pour revue.
-                    </p>
-
-                    <div style={{ display: 'flex', gap: 12, marginTop: 32 }}>
-                        <button className="btn btn-primary" style={{ padding: '12px 28px' }}>
-                            <Activity size={16} /> Flux Live
-                        </button>
-                        <button className="btn btn-ghost" style={{ padding: '12px 28px' }}>
-                            Archives Rapports
-                        </button>
+                    <div style={{ marginTop: 24, display: 'flex', gap: 40 }}>
+                        <div>
+                            <div style={{ fontSize: 10, fontWeight: 900, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: 4 }}>Commandes</div>
+                            <div style={{ fontSize: 20, fontWeight: 900 }}>{data?.todayOrders ?? 0}</div>
+                        </div>
+                        <div>
+                            <div style={{ fontSize: 10, fontWeight: 900, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: 4 }}>Panier Moyen</div>
+                            <div style={{ fontSize: 20, fontWeight: 900 }}>{data?.avgBasket ?? 0} MAD</div>
+                        </div>
                     </div>
                 </div>
 
-                <div style={{ opacity: 0.1, pointerEvents: 'none' }}>
-                    <Activity size={120} strokeWidth={1} style={{ color: 'var(--gold)' }} />
+                <div className="luxury-card" style={{ padding: 32, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                        <Shield size={18} style={{ color: 'var(--success)' }} />
+                        <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>Flux Confirmé</h3>
+                    </div>
+                    <div style={{ fontSize: 36, fontWeight: 900, color: 'var(--text)', marginBottom: 8 }}>{stats?.confirmed || 0}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>Validation opérationnelle active</div>
                 </div>
             </div>
 
-            {/* KPI Section */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20, marginBottom: 40 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginBottom: 32 }}>
                 <StatCard
-                    label="Chiffre d'affaires"
-                    value={`${stats?.revenue?.toLocaleString('fr-MA') || 0} MAD`}
-                    icon={DollarSign}
-                    sub="Total consolidé"
-                    accentColor="var(--gold)"
-                />
-                <StatCard
-                    label="Volume Commandes"
+                    label="Volume Global"
                     value={stats?.total_orders || 0}
                     icon={ShoppingBag}
-                    sub="Unités validées"
-                    accentColor="var(--info)"
+                    sub="Total historique"
                 />
                 <StatCard
-                    label="Taux de Conversion"
-                    value={`${data?.confirmationRate || 0}%`}
-                    icon={Zap}
-                    sub="Performance CRM"
-                    accentColor="var(--success)"
+                    label="Pertes (Annulées)"
+                    value={stats?.canceled || 0}
+                    icon={Shield}
+                    accentColor="var(--danger)"
+                    sub="Volume filtré"
                 />
                 <StatCard
-                    label="Panier Moyen"
-                    value={`${data?.avgBasket || 0} MAD`}
+                    label="Stock Critique"
+                    value={data?.lowStockAlerts?.length || 0}
                     icon={Activity}
-                    sub="Valeur par pack"
                     accentColor="var(--warning)"
+                    sub="Actions requises"
                 />
             </div>
 
-            {/* Insights Section */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 24 }}>
-                <div className="luxury-card" style={{ padding: 32 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>
-                            Tendances Géographiques
-                        </h3>
-                        <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--gold)' }}>LAST 30 DAYS</div>
-                    </div>
-                    {topCities.length === 0 ? (
-                        <EmptyState title="Aucune donnée" copy="Les tendances apparaîtront ici." />
-                    ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                            {topCities.slice(0, 5).map((city, idx) => (
-                                <div key={city.city} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-dim)', width: 16 }}>0{idx + 1}</div>
-                                        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{city.city}</span>
-                                    </div>
-                                    <strong style={{ fontSize: 14, fontWeight: 900 }}>{city.count} <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>CMD</span></strong>
-                                </div>
-                            ))}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 24, marginBottom: 32 }}>
+                {/* Priority & Actions */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                    <div className="luxury-card" style={{ padding: 40 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
+                            <Zap size={20} style={{ color: 'var(--gold)' }} />
+                            <h3 style={{ fontSize: 20, fontWeight: 900, fontFamily: 'serif', color: 'var(--text)' }}>Priorité Opérationnelle</h3>
                         </div>
-                    )}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
+                            <div style={{ padding: '32px 24px', background: 'var(--bg-elevated)', borderRadius: 22, border: '1px solid var(--border)', textAlign: 'center' }}>
+                                <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-dim)', marginBottom: 12, letterSpacing: '0.12em' }}>À CONFIRMER</div>
+                                <div style={{ fontSize: 42, fontWeight: 950, color: 'var(--gold)' }}>{data?.todayOrders || 0}</div>
+                            </div>
+                            <div style={{ padding: '32px 24px', background: 'var(--danger-soft)', borderRadius: 22, border: '1px solid var(--danger-soft)', textAlign: 'center' }}>
+                                <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--danger)', marginBottom: 12, letterSpacing: '0.12em' }}>Alerte Stock</div>
+                                <div style={{ fontSize: 42, fontWeight: 950, color: 'var(--danger)' }}>{data?.lowStockAlerts?.length || 0}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="luxury-card" style={{ padding: 40 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
+                            <Activity size={20} style={{ color: 'var(--gold)' }} />
+                            <h3 style={{ fontSize: 20, fontWeight: 900, fontFamily: 'serif', color: 'var(--text)' }}>Pilotage Commercial</h3>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+                            <Link href="/os/orders" className="btn-ghost" style={{ padding: '32px 24px', height: 'auto', flexDirection: 'column', alignItems: 'flex-start', gap: 8, borderRadius: 22 }}>
+                                <div style={{ fontWeight: 900, fontSize: 15, letterSpacing: '-0.01em' }}>Confirmation Rapide</div>
+                                <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>Traiter le flux entrant</div>
+                            </Link>
+                            <Link href="/os/pipeline" className="btn-ghost" style={{ padding: '32px 24px', height: 'auto', flexDirection: 'column', alignItems: 'flex-start', gap: 8, borderRadius: 22 }}>
+                                <div style={{ fontWeight: 900, fontSize: 15, letterSpacing: '-0.01em' }}>Suivi Logistique</div>
+                                <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>Contrôle des expéditions</div>
+                            </Link>
+                            <Link href="/os/products" className="btn btn-primary" style={{ padding: '32px 24px', height: 'auto', flexDirection: 'column', alignItems: 'flex-start', gap: 8, borderRadius: 22, color: 'white' }}>
+                                <div style={{ fontWeight: 900, fontSize: 15, letterSpacing: '-0.01em' }}>Gestion Catalogue</div>
+                                <div style={{ fontSize: 13, opacity: 0.9 }}>Mise à jour collections</div>
+                            </Link>
+                            <Link href="/os/inventory" className="btn-ghost" style={{ padding: '32px 24px', height: 'auto', flexDirection: 'column', alignItems: 'flex-start', gap: 8, borderRadius: 22 }}>
+                                <div style={{ fontWeight: 900, fontSize: 15, letterSpacing: '-0.01em' }}>Stocks & Alerts</div>
+                                <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>Inventaire Maison</div>
+                            </Link>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="luxury-card" style={{ padding: 32 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>
-                            Collections Dominantes
-                        </h3>
-                        <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--gold)' }}>TOP SCALE</div>
-                    </div>
-                    {topPerfumes.length === 0 ? (
-                        <EmptyState title="Aucune donnée" copy="Les best-sellers apparaîtront ici." />
-                    ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                            {topPerfumes.slice(0, 5).map((perf, idx) => (
-                                <div key={perf.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-dim)', width: 16 }}>0{idx + 1}</div>
-                                        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{perf.name}</span>
-                                    </div>
-                                    <strong style={{ fontSize: 14, fontWeight: 900 }}>{perf.count} <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>VDS</span></strong>
+                {/* Performance Side */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                    <div className="luxury-card" style={{ padding: 40 }}>
+                        <h4 style={{ fontSize: 11, fontWeight: 900, color: 'var(--gold)', letterSpacing: '0.15em', marginBottom: 24, textTransform: 'uppercase' }}>MAISON ELIE — TOP VILLES</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {stats?.top_cities && stats.top_cities.length > 0 ? stats.top_cities.slice(0, 5).map((city, i) => (
+                                <div key={city.city} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: i < 4 ? '1px solid var(--border)' : 'none' }}>
+                                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{city.city}</span>
+                                    <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--gold)' }}>{city.count} cmd</span>
                                 </div>
-                            ))}
+                            )) : <EmptyState title="" copy="Données indisponibles" />}
                         </div>
-                    )}
+                    </div>
+
+                    <div className="luxury-card" style={{ padding: 40 }}>
+                        <h4 style={{ fontSize: 11, fontWeight: 900, color: 'var(--gold)', letterSpacing: '0.15em', marginBottom: 24, textTransform: 'uppercase' }}>MAISON ELIE — MEILLEURES VENTES</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {stats?.top_perfumes && stats.top_perfumes.length > 0 ? stats.top_perfumes.slice(0, 5).map((perf, i) => (
+                                <div key={perf.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: i < 4 ? '1px solid var(--border)' : 'none' }}>
+                                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{perf.name}</span>
+                                    <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--gold)' }}>{perf.count} vds</span>
+                                </div>
+                            )) : <EmptyState title="" copy="Données indisponibles" />}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

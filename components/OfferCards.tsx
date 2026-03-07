@@ -80,18 +80,18 @@ export function OfferCards() {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10 max-w-6xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-12 max-w-6xl mx-auto px-4 md:px-0">
                     {OFFERS.map((offer) => {
                         const isSelected = selectedPackType === offer.id;
 
                         return (
                             <motion.div
                                 key={offer.id}
-                                whileHover={{ y: -8 }}
+                                whileHover={{ y: -12 }}
                                 onClick={() => handleSelectPack(offer.id)}
-                                className={`group relative flex flex-col rounded-[2.5rem] bg-white transition-all duration-500 cursor-pointer overflow-hidden border-2 ${isSelected
-                                    ? "border-amber-400 shadow-[0_25px_60px_-15px_rgba(251,191,36,0.3)] ring-4 ring-amber-400/5"
-                                    : "border-transparent shadow-[0_15px_35px_-12px_rgba(0,0,0,0.06)] hover:shadow-[0_25px_45px_-15px_rgba(0,0,0,0.1)] hover:border-zinc-200"
+                                className={`group relative flex flex-col rounded-[2.5rem] bg-white transition-all duration-700 cursor-pointer overflow-hidden border-2 ${isSelected
+                                    ? "border-[#C9A86A] shadow-[0_30px_70px_-15px_rgba(198,163,78,0.4)] ring-[6px] ring-[#C9A86A]/10"
+                                    : "border-transparent shadow-[0_20px_50px_-12px_rgba(0,0,0,0.08)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.15)] hover:border-zinc-200"
                                     }`}
                             >
                                 {/* Top Section: Image */}
@@ -99,17 +99,17 @@ export function OfferCards() {
                                     <img
                                         src={getAssetPath(offer.img)}
                                         alt={t(offer.titleKey as any) || getFallbackLabel(offer.id, 'title')}
-                                        className={`w-full h-full object-cover transition-transform duration-1000 ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`}
+                                        className={`w-full h-full object-cover transition-transform duration-[1200ms] ease-out ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`}
                                     />
                                     {/* Premium Readability Overlay */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-70 transition-opacity" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-70 group-hover:opacity-80 transition-opacity duration-500" />
 
                                     {/* Content - Bottom Aligned for Premium Look */}
-                                    <div className="absolute bottom-0 left-0 right-0 p-6 z-10" dir={dir}>
+                                    <div className="absolute bottom-0 left-0 right-0 p-8 z-10" dir={dir}>
                                         <h3 className="text-2xl md:text-3xl font-black text-white mb-2 tracking-tight">
                                             {t(offer.titleKey as any) || getFallbackLabel(offer.id, 'title')}
                                         </h3>
-                                        <p className="text-white/80 text-sm md:text-base font-medium line-clamp-2">
+                                        <p className="text-white/90 text-sm md:text-base font-medium line-clamp-2 leading-relaxed">
                                             {t(offer.descKey as any) || getFallbackLabel(offer.id, 'desc')}
                                         </p>
                                     </div>
@@ -118,22 +118,22 @@ export function OfferCards() {
                                     <AnimatePresence>
                                         {isSelected && (
                                             <motion.div
-                                                initial={{ scale: 0, opacity: 0 }}
-                                                animate={{ scale: 1, opacity: 1 }}
-                                                className="absolute top-6 right-6 w-12 h-12 rounded-full bg-amber-400 shadow-lg flex items-center justify-center border-4 border-white z-20"
+                                                initial={{ scale: 0, opacity: 0, rotate: -20 }}
+                                                animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                                                className="absolute top-8 right-8 w-14 h-14 rounded-full bg-[#C9A86A] shadow-xl flex items-center justify-center border-4 border-white z-20"
                                             >
-                                                <Check className="w-6 h-6 text-white stroke-[3px]" />
+                                                <Check className="w-8 h-8 text-white stroke-[3.5px]" />
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
                                 </div>
 
                                 {/* Middle Section: Content */}
-                                <div className={`p-8 flex-grow flex flex-col items-center text-center ${dir === 'rtl' ? 'rtl' : 'ltr'}`} dir={dir}>
-                                    <h3 className={`text-2xl font-black mb-3 ${isSelected ? 'text-amber-600' : 'text-zinc-900'}`}>
+                                <div className={`p-9 flex-grow flex flex-col items-center text-center ${dir === 'rtl' ? 'rtl' : 'ltr'}`} dir={dir}>
+                                    <h3 className={`text-2xl font-black mb-4 ${isSelected ? 'text-[#C9A86A]' : 'text-zinc-900'}`}>
                                         {t(offer.titleKey as any) || getFallbackLabel(offer.id, 'title')}
                                     </h3>
-                                    <p className="text-zinc-500 font-bold mb-8 leading-relaxed">
+                                    <p className="text-zinc-500 font-medium mb-10 leading-relaxed text-sm md:text-base">
                                         {t(offer.descKey as any) || getFallbackLabel(offer.id, 'desc')}
                                     </p>
 
@@ -142,12 +142,12 @@ export function OfferCards() {
                                             e.stopPropagation();
                                             handleSelectPack(offer.id);
                                         }}
-                                        className={`mt-auto w-full h-[64px] rounded-[16px] font-bold text-[18px] transition-all flex items-center justify-center gap-3 overflow-hidden relative ${isSelected
-                                            ? "bg-[#C9A86A] text-white shadow-xl shadow-[#C9A86A]/20"
-                                            : "bg-zinc-900 text-white group-hover:bg-[#C9A86A] group-hover:shadow-xl group-hover:shadow-[#C9A86A]/20"
+                                        className={`mt-auto w-full h-[68px] rounded-[18px] font-black text-[18px] transition-all duration-300 flex items-center justify-center gap-3 overflow-hidden relative ${isSelected
+                                            ? "bg-[#C9A86A] text-white shadow-xl shadow-[#C9A86A]/30"
+                                            : "bg-zinc-900 text-white group-hover:bg-[#C9A86A] group-hover:shadow-xl group-hover:shadow-[#C9A86A]/30"
                                             }`}
                                     >
-                                        {isSelected && <Check className="w-5 h-5 flex-shrink-0" />}
+                                        {isSelected && <Check className="w-6 h-6 flex-shrink-0 stroke-[3px]" />}
                                         <span className="relative z-10">
                                             {isSelected
                                                 ? getFallbackLabel(offer.id, 'selected')
@@ -158,7 +158,7 @@ export function OfferCards() {
 
                                 {/* Selection Overlay */}
                                 {isSelected && (
-                                    <div className="absolute inset-0 bg-amber-400/5 pointer-events-none" />
+                                    <div className="absolute inset-0 bg-[#C9A86A]/5 pointer-events-none" />
                                 )}
                             </motion.div>
                         );

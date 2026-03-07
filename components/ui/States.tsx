@@ -5,21 +5,21 @@ import type { ReactNode } from 'react';
 
 export function LoadingState({ label = 'Chargement en cours…' }: { label?: string }) {
     return (
-        <div className="luxury-card" style={{
+        <div style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '80px 40px',
+            padding: '120px 40px',
             textAlign: 'center',
-            minHeight: 280,
-            background: 'var(--surface-1)'
+            background: 'var(--bg)',
+            height: '100%'
         }}>
-            <div style={{ width: 56, height: 56, marginBottom: 24, background: 'var(--gold-glow)', color: 'var(--gold)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--gold-border)' }}>
-                <Loader2 size={26} className="animate-spin" />
+            <div style={{ position: 'relative', width: 44, height: 44, marginBottom: 32 }}>
+                <div className="animate-spin" style={{ position: 'absolute', inset: 0, border: '2px solid var(--border)', borderTop: '2px solid var(--gold)', borderRadius: '50%' }} />
             </div>
-            <h3 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 950, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--text-dim)' }}>Synchronisation</h3>
-            <p style={{ margin: 0, color: 'var(--text)', fontSize: 16, fontWeight: 800, maxWidth: 320 }}>{label}</p>
+            <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.2em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 12 }}>Maison ELIE</div>
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13, fontWeight: 700, letterSpacing: '0.05em' }}>{label.toUpperCase()}</p>
         </div>
     );
 }

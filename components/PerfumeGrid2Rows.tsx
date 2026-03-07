@@ -79,7 +79,7 @@ export function PerfumeGrid2Rows() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-3 md:gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-6 md:gap-8">
                     <AnimatePresence mode="popLayout">
                         {displayPerfumes.map((perfume, idx) => {
                             const selected = selectedPerfumes.some(p => p?.id === perfume.id);
@@ -90,22 +90,22 @@ export function PerfumeGrid2Rows() {
                                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                                     whileInView={{ opacity: 1, scale: 1, y: 0 }}
                                     viewport={{ once: true }}
-                                    transition={{ duration: 0.4, delay: idx * 0.04 }}
+                                    transition={{ duration: 0.5, delay: idx * 0.04 }}
                                     onClick={() => !selected && addPerfume(perfume)}
-                                    className={`card-tap group relative p-4 rounded-[2rem] border-2 transition-all duration-500 bg-white card-premium ${selected
-                                        ? "border-amber-400 bg-amber-50/30 shadow-lg shadow-amber-400/10"
+                                    className={`card-tap group relative p-5 rounded-[2.5rem] border-2 transition-all duration-700 bg-white card-premium ${selected
+                                        ? "border-[#C9A86A] bg-[#C9A86A]/5 shadow-xl shadow-[#C9A86A]/10"
                                         : (isFull && activeSlotIndex === null)
                                             ? "border-transparent opacity-50 grayscale cursor-not-allowed"
-                                            : "border-transparent"
+                                            : "border-transparent shadow-[0_15px_40px_-12px_rgba(0,0,0,0.06)] hover:shadow-[0_25px_50px_-15px_rgba(0,0,0,0.12)] hover:border-zinc-100"
                                         }`}
                                 >
                                     {/* Image Container */}
-                                    <div className="aspect-[4/5] mb-4 overflow-hidden rounded-[1.5rem] bg-zinc-50 p-4 flex items-center justify-center relative">
-                                        <div className={`absolute inset-0 transition-opacity duration-300 ${selected ? "opacity-100 bg-amber-400/5" : "opacity-0 group-hover:opacity-100 bg-black/3"}`} />
+                                    <div className="aspect-[4/5] mb-5 overflow-hidden rounded-[2rem] bg-zinc-50 p-6 flex items-center justify-center relative">
+                                        <div className={`absolute inset-0 transition-opacity duration-500 ${selected ? "opacity-100 bg-[#C9A86A]/5" : "opacity-0 group-hover:opacity-100 bg-black/3"}`} />
                                         <img
                                             src={perfume.image}
                                             alt={perfume.name}
-                                            className={`w-full h-full object-contain transition-all duration-700 ${selected ? 'scale-105 brightness-105' : 'group-hover:scale-110'}`}
+                                            className={`w-full h-full object-contain transition-all duration-[1000ms] ${selected ? 'scale-105 brightness-105' : 'group-hover:scale-115'}`}
                                             onError={handleImageError}
                                             loading="lazy"
                                         />
@@ -116,35 +116,35 @@ export function PerfumeGrid2Rows() {
                                                 <motion.div
                                                     initial={{ scale: 0, rotate: -20 }}
                                                     animate={{ scale: 1, rotate: 0 }}
-                                                    className="absolute top-3 right-3 w-8 h-8 rounded-full bg-amber-400 flex items-center justify-center shadow-lg border-2 border-white z-10"
+                                                    className="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#C9A86A] flex items-center justify-center shadow-lg border-2 border-white z-10"
                                                 >
-                                                    <Check className="w-4 h-4 text-white stroke-[4px]" />
+                                                    <Check className="w-5 h-5 text-white stroke-[4px]" />
                                                 </motion.div>
                                             )}
                                         </AnimatePresence>
                                     </div>
 
-                                    <div className={`px-1 ${dir === 'rtl' ? 'text-right' : 'text-left'}`} dir={dir}>
-                                        <div className="text-[9px] uppercase font-black text-amber-500 mb-1 tracking-widest opacity-80">
+                                    <div className={`px-2 ${dir === 'rtl' ? 'text-right' : 'text-left'}`} dir={dir}>
+                                        <div className="text-[10px] uppercase font-black text-[#C9A86A] mb-2 tracking-[0.2em] opacity-80">
                                             {perfume.tier === "niche" ? "✨ EXCLUSIF" : "💎 ELIE"}
                                         </div>
-                                        <h4 className="font-bold text-[13px] md:text-[15px] mb-4 text-zinc-900 truncate leading-tight">
+                                        <h4 className="font-bold text-[14px] md:text-[16px] mb-5 text-zinc-900 truncate leading-tight">
                                             {perfume.name}
                                         </h4>
 
                                         <button
                                             onClick={(e) => { e.stopPropagation(); if (!selected) addPerfume(perfume); }}
-                                            className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 transition-all font-black text-xs ${selected
-                                                ? "bg-amber-100 text-amber-600 cursor-default"
+                                            className={`w-full py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 font-black text-xs ${selected
+                                                ? "bg-[#C9A86A]/10 text-[#C9A86A] cursor-default"
                                                 : (isFull && activeSlotIndex === null)
                                                     ? "bg-zinc-100 text-zinc-400 border border-transparent cursor-not-allowed"
-                                                    : "bg-zinc-900 text-white hover:bg-primary hover:shadow-lg hover:shadow-primary/20"
+                                                    : "bg-zinc-900 text-white hover:bg-[#C9A86A] hover:shadow-xl hover:shadow-[#C9A86A]/20"
                                                 }`}
                                         >
-                                            {selected ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                                            {selected ? <Check className="w-4 h-4 stroke-[3px]" /> : <Plus className="w-4 h-4 stroke-[3px]" />}
                                             <span>
                                                 {selected
-                                                    ? t('selected')
+                                                    ? t('added')
                                                     : (isFull && activeSlotIndex === null) ? t('full') : t('add')}
                                             </span>
                                         </button>

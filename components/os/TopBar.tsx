@@ -74,11 +74,11 @@ export function TopBar() {
     return (
         <header className="topbar">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <h1 className="topbar-title" style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>{title}</h1>
+                <h1 className="topbar-title" style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', fontFamily: 'serif' }}>{title}</h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 8px var(--success)' }} />
-                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.02em' }}>SYSTEM LIVE</span>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--success)' }} />
+                        <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', letterSpacing: '0.05em' }}>OPÉRATIONS LIVE</span>
                     </div>
                     <span style={{ color: 'var(--border)', fontSize: 10 }}>•</span>
                     <LiveClock />
@@ -86,18 +86,19 @@ export function TopBar() {
             </div>
 
             <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-                <div style={{ width: '100%', maxWidth: 480, position: 'relative' }}>
+                <div style={{ width: '100%', maxWidth: 520, position: 'relative' }}>
                     <Search size={15} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)', opacity: 0.6 }} />
                     <input
                         type="text"
                         className="filter-input"
-                        placeholder="Rechercher dans l'écosystème ELIE..."
+                        placeholder="Rechercher client, téléphone, ville..."
                         style={{
                             width: '100%',
-                            height: 44,
-                            paddingLeft: 46,
-                            background: 'rgba(255,255,255,0.03)',
-                            border: '1px solid rgba(255,255,255,0.06)',
+                            height: 48,
+                            paddingLeft: 48,
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '14px',
                             fontSize: 13,
                         }}
                         value={query}
@@ -105,21 +106,21 @@ export function TopBar() {
                     />
 
                     {(loading || results.length > 0 || query.trim().length >= 2) && (
-                        <div className="card" style={{
+                        <div className="luxury-card" style={{
                             position: 'absolute',
-                            top: 52,
+                            top: 56,
                             left: 0,
                             right: 0,
                             zIndex: 300,
                             padding: 8,
-                            background: 'var(--surface-1)',
-                            border: '1px solid var(--border-strong)',
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border)',
                             boxShadow: 'var(--shadow-lg)'
                         }}>
                             {loading ? (
-                                <div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>Recherche en cours...</div>
+                                <div style={{ padding: 16, fontSize: 12, color: 'var(--text-dim)', textAlign: 'center' }}>Recherche en cours...</div>
                             ) : results.length === 0 ? (
-                                <div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>Aucun résultat trouvé</div>
+                                <div style={{ padding: 16, fontSize: 12, color: 'var(--text-dim)', textAlign: 'center' }}>Aucun résultat trouvé</div>
                             ) : (
                                 results.map((result) => (
                                     <button
@@ -141,7 +142,7 @@ export function TopBar() {
                                             background: 'transparent',
                                             color: 'inherit',
                                             padding: '12px 14px',
-                                            borderRadius: 10,
+                                            borderRadius: 12,
                                             cursor: 'pointer',
                                             textAlign: 'left',
                                             transition: 'background 0.2s'
@@ -160,42 +161,43 @@ export function TopBar() {
                 </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    padding: '6px 14px',
-                    borderRadius: 10,
-                    background: 'rgba(200, 167, 107, 0.08)',
-                    border: '1px solid rgba(200, 167, 107, 0.15)',
-                    color: 'var(--gold)',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    letterSpacing: '0.02em'
+                    padding: '8px 16px',
+                    borderRadius: 12,
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-muted)',
+                    fontSize: 10,
+                    fontWeight: 900,
+                    letterSpacing: '0.08em'
                 }}>
-                    <Sparkles size={13} fill="var(--gold)" fillOpacity={0.2} />
-                    <span>ELIE CORE AI</span>
+                    <Activity size={14} />
+                    <span>SYSTÈME OPÉRATIONNEL</span>
                 </div>
 
                 <div style={{ height: 24, width: 1, background: 'var(--border)' }} />
 
-                <button className="btn-ghost" style={{ width: 40, height: 40, padding: 0, borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
+                <button className="btn-ghost" style={{ width: 44, height: 44, padding: 0, borderRadius: 14, background: 'var(--surface)' }}>
                     <Bell size={18} style={{ color: 'var(--text-muted)' }} />
                 </button>
 
                 <div className="topbar-avatar" style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    background: 'linear-gradient(135deg, #1A1C26, #111218)',
-                    border: '1px solid var(--border-strong)',
+                    width: 44,
+                    height: 44,
+                    borderRadius: 14,
+                    background: 'var(--gold-glow)',
+                    border: '1px solid var(--gold-border)',
+                    color: 'var(--gold)',
                     fontSize: 14,
                     fontWeight: 800
                 }}>
                     A
                 </div>
             </div>
-        </header>
+        </header >
     );
 }

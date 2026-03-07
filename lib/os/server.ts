@@ -67,6 +67,11 @@ export async function fetchOrders(filters: OrderFilters = {}): Promise<Normalize
     .order("created_at", { ascending: false })
     .limit(limit);
 
+  if (filters.days) {
+    const since = new Date(Date.now() - filters.days * 24 * 60 * 60 * 1000).toISOString();
+    query = query.gte("created_at", since);
+  }
+
   if (filters.pipeline) {
     // Pipeline usually excludes final states to keep board clean
     query = query.not("status", "in", '("delivered","canceled")');
@@ -96,27 +101,56 @@ export async function fetchOrders(filters: OrderFilters = {}): Promise<Normalize
 }
 
 export async function fetchCatalogProducts(): Promise<CatalogProduct[]> {
-  const supabase = createServiceSupabaseClient();
-  const { data, error } = await supabase
-    .from("products")
-    .select("id,name,category,tier,is_active,stock,low_stock_threshold,created_at")
-    .order("name", { ascending: true });
+  try {
+    const supabase = createServiceSupabaseClient();
 
-  if (error) {
-    console.error("[OS/SERVER] fetchCatalogProducts error:", error);
-    throw error;
+    // Join perfumes with inventory
+    const { data, error } = await supabase
+      .from("perfumes")
+      .select(`
+        id,
+        name,
+        slug,
+        gender,
+        tier,
+        is_active,
+        image_url,
+        created_at,
+        inventory (
+          stock,
+          low_stock_threshold
+        )
+      `)
+      .order("name", { ascending: true });
+
+    if (error) {
+      if (error.code === "PGRST204" || error.code === "42P01") {
+        console.warn("[OS/SERVER] Perfumes table missing, returning empty catalog");
+        return [];
+      }
+      console.error("[OS/SERVER] fetchCatalogProducts error:", error);
+      throw error;
+    }
+
+    return (data || []).map((row: any) => {
+      const inv = row.inventory?.[0] || row.inventory || {};
+      return {
+        id: row.id,
+        name: row.name,
+        slug: row.slug || row.name.toLowerCase().replace(/ /g, '-'),
+        category: row.gender || "mixte",
+        tier: row.tier || "classic",
+        is_active: row.is_active ?? true,
+        image_url: row.image_url || '/catalogues/placeholder.webp',
+        stock: inv.stock ?? 0,
+        low_stock_threshold: inv.low_stock_threshold ?? 5,
+        created_at: row.created_at || undefined,
+      };
+    });
+  } catch (err) {
+    console.warn("[OS/SERVER] fetchCatalogProducts failed gracefully:", err);
+    return [];
   }
-
-  return (data || []).map((row) => ({
-    id: row.id,
-    name: row.name,
-    category: row.category || "mixte",
-    tier: row.tier || "classic",
-    is_active: row.is_active ?? true,
-    stock: row.stock ?? 0,
-    low_stock_threshold: row.low_stock_threshold ?? 5,
-    created_at: row.created_at || undefined,
-  }));
 }
 
 export async function fetchInventoryStats() {
@@ -136,44 +170,56 @@ export async function fetchInventoryStats() {
   };
 }
 
-
-
 export async function fetchOverview(days = 30) {
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-  const orders = await fetchOrders({ limit: 1000 });
-  const scoped = orders.filter((order) => order.created_at >= since);
-  const stats = calculateStats(scoped as Order[]);
+  try {
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const todayOrders = orders.filter((order) => order.created_at >= startOfToday.toISOString());
-  const todayRevenue = todayOrders
-    .filter((order) => order.status !== "canceled")
-    .reduce((sum, order) => sum + (order.total_price || 0), 0);
+    // Fetch orders safely
+    let orders: NormalizedOrder[] = [];
+    try {
+      orders = await fetchOrders({ limit: 1000 });
+    } catch (e) {
+      console.warn("[OS/SERVER] Failed to fetch orders for overview, using empty list");
+    }
 
-  const avgBasket = stats.total_orders > 0 ? Math.round(stats.revenue / stats.total_orders) : 0;
-  const confirmationRate =
-    stats.total_orders > 0 ? Math.round((stats.confirmed / stats.total_orders) * 100) : 0;
+    const scoped = orders.filter((order) => order.created_at >= since);
+    const stats = calculateStats(scoped as Order[]);
 
-  const catalog = await fetchCatalogProducts();
-  const lowStockAlerts = catalog
-    .filter((product) => product.stock <= product.low_stock_threshold)
-    .sort((a, b) => a.stock - b.stock)
-    .slice(0, 5)
-    .map((product) => ({
-      perfume_id: product.id,
-      name: product.name,
-      stock: product.stock,
-      low_stock_threshold: product.low_stock_threshold,
-    }));
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const todayOrders = orders.filter((order) => order.created_at >= startOfToday.toISOString());
+    const todayRevenue = todayOrders
+      .filter((order) => order.status !== "canceled")
+      .reduce((sum, order) => sum + (order.total_price || 0), 0);
 
-  return {
-    stats,
-    recentOrders: scoped.slice(0, 8),
-    todayRevenue,
-    todayOrders: todayOrders.length,
-    avgBasket,
-    confirmationRate,
-    lowStockAlerts,
-  };
+    const avgBasket = stats.total_orders > 0 ? Math.round(stats.revenue / stats.total_orders) : 0;
+    const confirmationRate =
+      stats.total_orders > 0 ? Math.round((stats.confirmed / stats.total_orders) * 100) : 0;
+
+    // Fetch catalog safely
+    const catalog = await fetchCatalogProducts();
+    const lowStockAlerts = catalog
+      .filter((product) => product.stock <= product.low_stock_threshold)
+      .sort((a, b) => a.stock - b.stock)
+      .slice(0, 5)
+      .map((product) => ({
+        perfume_id: product.id,
+        name: product.name,
+        stock: product.stock,
+        low_stock_threshold: product.low_stock_threshold,
+      }));
+
+    return {
+      stats,
+      recentOrders: scoped.slice(0, 8),
+      todayRevenue,
+      todayOrders: todayOrders.length,
+      avgBasket,
+      confirmationRate,
+      lowStockAlerts,
+    };
+  } catch (err) {
+    console.error("[OS/SERVER] fetchOverview hard failure:", err);
+    throw err;
+  }
 }

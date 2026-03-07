@@ -3,57 +3,68 @@
    ============================================================ */
 
 :root {
-    /* Base Colors - Deep Onyx & Obsidian */
-    --bg: #050505;
-    --bg-elevated: #080808;
-    --surface: #0C0C0C;
-    --surface-1: #111111;
-    --surface-2: #161616;
-    --surface-3: #1C1C1C;
+    /* ELIE OS V3.1 — LUXURY LIGHT PALETTE */
+    --bg: #F7F3EE;
+    /* Warm Ivory - Main Background */
+    --bg-elevated: #FCFAF7;
+    /* Section Background */
+    --surface: #FFFFFF;
+    /* Card Background */
+    --surface-1: #FCFAF7;
+    --surface-2: #F7F3EE;
+    --surface-3: #E8DED0;
+    /* Soft Beige */
 
-    /* Border & Accents - Subtle & Sharp */
-    --border: rgba(255, 255, 255, 0.04);
-    --border-strong: rgba(200, 167, 107, 0.2);
-    --glass-border: rgba(255, 255, 255, 0.06);
+    /* Border & Accents */
+    --border: #E8DED0;
+    --border-strong: #D9CDBE;
+    --glass-border: rgba(232, 222, 208, 0.6);
 
-    /* Branding - Muted Champagne Gold */
-    --gold: #C5A572;
-    --gold-hover: #D4B685;
-    --gold-glow: rgba(197, 165, 114, 0.08);
-    --gold-border: rgba(197, 165, 114, 0.15);
-    --champagne: #F5F1E8;
+    /* Branding - Gold */
+    --gold: #C9A86A;
+    /* Main Gold */
+    --gold-hover: #B8924E;
+    /* Hover Gold */
+    --gold-glow: rgba(201, 168, 106, 0.08);
+    --gold-border: rgba(201, 168, 106, 0.2);
+    --champagne: #FDFBF7;
 
-    /* Status Colors (Executive Muted) */
-    --success: #3E8E75;
-    --success-soft: rgba(62, 142, 117, 0.08);
-    --warning: #B88240;
-    --warning-soft: rgba(184, 130, 64, 0.08);
-    --danger: #A64452;
-    --danger-soft: rgba(166, 68, 82, 0.08);
-    --info: #456B8F;
+    /* Status Colors (Muted & Premium) */
+    --success: #2F8F63;
+    --success-soft: rgba(47, 143, 99, 0.08);
+    --warning: #D5A13E;
+    --warning-soft: rgba(213, 161, 62, 0.08);
+    --danger: #C96A6A;
+    --danger-soft: rgba(201, 106, 106, 0.08);
+    --info: #7C8CA0;
+    --info-soft: rgba(124, 140, 160, 0.08);
 
-    /* Typography - Prioritizing Readability & Hierarchy */
-    --text: #F8F7F3;
-    /* Pure Ivory */
-    --text-muted: #9E9E9E;
-    /* Clean Gray */
-    --text-dim: #666666;
-    /* Deep Muted */
+    /* Typography */
+    --text: #1E1A17;
+    /* Primary Charcoal */
+    --text-muted: #6A5F55;
+    /* Secondary Warm Gray */
+    --text-dim: #9A8F85;
+    /* Distant Gray */
 
     /* Fixed Layout Scale */
-    --sidebar-w: 260px;
-    --topbar-h: 72px;
-    --radius: 20px;
+    --sidebar-w: 280px;
+    --topbar-h: 80px;
+    --radius: 22px;
+    /* Premium Large Radius */
     --radius-sm: 12px;
-    --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.6);
+
+    /* Shadows - Soft & Warm Ivory */
+    --shadow: 0 4px 20px rgba(30, 26, 23, 0.02);
+    --shadow-lg: 0 12px 40px rgba(30, 26, 23, 0.04);
+    --shadow-gold: 0 4px 14px rgba(201, 168, 106, 0.12);
 
     --font: var(--font-inter), system-ui, sans-serif;
 
-    /* Gradients - Subtle & Deep */
+    /* Subtle luxury texture gradient */
     --shell-gradient:
-        radial-gradient(ellipse at 0% 0%, rgba(197, 165, 114, 0.04) 0%, transparent 50%),
-        radial-gradient(ellipse at 100% 100%, rgba(69, 107, 143, 0.03) 0%, transparent 50%);
+        radial-gradient(circle at 0% 0%, rgba(201, 168, 106, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 100% 100%, rgba(124, 140, 160, 0.03) 0%, transparent 50%);
 }
 
 /* ─── Premium UI Classes ────────────────────────────────────── */
@@ -144,9 +155,8 @@
 }
 
 .glass-panel {
-    background: var(--glass);
-    backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid var(--glass-border);
+    background: var(--surface);
+    border: 1px solid var(--border);
 }
 
 .dashboard-body {
@@ -179,19 +189,19 @@
     flex: 1;
     overflow-y: auto;
     padding: 30px 30px 34px;
-    background: linear-gradient(180deg, rgba(7, 7, 9, 0.56) 0%, var(--bg) 100%);
+    background: var(--bg);
 }
 
 /* ─── Sidebar ──────────────────────────────────────────────── */
 .sidebar {
     width: var(--sidebar-w);
-    background: linear-gradient(190deg, rgba(17, 18, 24, 0.98), rgba(11, 11, 16, 0.98));
-    border-right: 1px solid rgba(255, 255, 255, 0.07);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: inset -1px 0 0 rgba(230, 210, 162, 0.08);
+    box-shadow: 1px 0 10px rgba(31, 26, 23, 0.02);
 }
 
 .sidebar-logo {
@@ -200,8 +210,8 @@
     flex-direction: column;
     justify-content: center;
     padding: 0 24px 0 26px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-    background: linear-gradient(180deg, rgba(230, 210, 162, 0.03), transparent);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-elevated);
 }
 
 .sidebar-logo-text {
@@ -255,16 +265,15 @@
 }
 
 .sidebar-item:hover {
-    background: rgba(255, 255, 255, 0.03);
-    border-color: rgba(255, 255, 255, 0.08);
+    background: var(--bg-elevated);
+    border-color: var(--border);
     color: var(--text);
 }
 
 .sidebar-item.active {
-    background: linear-gradient(135deg, rgba(200, 167, 107, 0.17), rgba(230, 210, 162, 0.06));
+    background: var(--gold-glow);
     color: var(--gold);
-    border-color: rgba(230, 210, 162, 0.36);
-    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.32);
+    border-color: var(--gold-border);
 }
 
 .sidebar-item-icon {
@@ -291,9 +300,8 @@
 /* ─── TopBar ───────────────────────────────────────────────── */
 .topbar {
     height: var(--topbar-h);
-    background: rgba(12, 12, 17, 0.76);
-    backdrop-filter: blur(18px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     padding: 0 28px;
@@ -302,6 +310,7 @@
     position: sticky;
     top: 0;
     z-index: 70;
+    box-shadow: 0 2px 12px rgba(30, 26, 23, 0.02);
 }
 
 .topbar-title {
@@ -324,8 +333,8 @@
     width: 38px;
     height: 38px;
     border-radius: 12px;
-    background: linear-gradient(135deg, rgba(200, 167, 107, 0.21), rgba(230, 210, 162, 0.08));
-    border: 1px solid var(--border-strong);
+    background: var(--gold-glow);
+    border: 1px solid var(--gold-border);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -352,10 +361,9 @@
 }
 
 .card:hover {
-    border-color: rgba(230, 210, 162, 0.28);
+    border-color: var(--gold-border);
     transform: translateY(-3px);
     box-shadow: var(--shadow-lg);
-    background: var(--surface-1);
 }
 
 .card-sm {
@@ -413,7 +421,7 @@
 .kpi-card:hover {
     border-color: var(--border);
     transform: translateY(-3px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 12px 40px rgba(30, 26, 23, 0.04);
 }
 
 .kpi-label {
@@ -514,25 +522,25 @@
 
 .btn-primary {
     background: var(--gold);
-    color: #111;
-    box-shadow: 0 10px 24px rgba(200, 167, 107, 0.25);
+    color: white;
+    box-shadow: 0 4px 12px rgba(201, 168, 106, 0.2);
 }
 
 .btn-primary:hover {
     background: var(--gold-hover);
     transform: translateY(-1px);
-    box-shadow: 0 14px 30px rgba(200, 167, 107, 0.34);
+    box-shadow: 0 6px 20px rgba(201, 168, 106, 0.3);
 }
 
 .btn-ghost {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--surface);
     color: var(--text);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--border);
 }
 
 .btn-ghost:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(230, 210, 162, 0.34);
+    background: var(--bg-elevated);
+    border-color: var(--gold-border);
 }
 
 .btn-sm {
@@ -601,7 +609,7 @@
 }
 
 .data-table tbody tr:hover {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--bg-elevated);
 }
 
 /* ─── Status Badges ────────────────────────────────────────── */
@@ -617,40 +625,41 @@
 }
 
 .badge-new {
-    background: rgba(76, 123, 165, 0.2);
-    color: #86a8c6;
-    border: 1px solid rgba(134, 168, 198, 0.36);
+    background: var(--info-soft);
+    color: var(--info);
+    border: 1px solid var(--info);
+    opacity: 0.8;
 }
 
 .badge-to_confirm {
-    background: rgba(200, 146, 69, 0.22);
-    color: #e4bb79;
-    border: 1px solid rgba(228, 187, 121, 0.34);
+    background: var(--warning-soft);
+    color: var(--warning);
+    border: 1px solid var(--warning);
 }
 
 .badge-confirmed {
-    background: rgba(58, 157, 122, 0.2);
-    color: #8fd5b7;
-    border: 1px solid rgba(143, 213, 183, 0.32);
+    background: var(--success-soft);
+    color: var(--success);
+    border: 1px solid var(--success-soft);
 }
 
 .badge-shipped {
-    background: rgba(91, 121, 179, 0.22);
-    color: #aec2eb;
-    border: 1px solid rgba(174, 194, 235, 0.32);
+    background: #E8F0FE;
+    color: #4C7BA5;
+    border: 1px solid rgba(76, 123, 165, 0.2);
 }
 
 .badge-delivered {
-    background: rgba(58, 157, 122, 0.28);
-    color: #b8ead5;
-    border: 1px solid rgba(184, 234, 213, 0.4);
+    background: #E6F4EA;
+    color: #2F8F63;
+    border: 1px solid rgba(47, 143, 99, 0.2);
 }
 
 .badge-cancelled,
 .badge-canceled {
-    background: rgba(180, 85, 95, 0.2);
-    color: #d8a8ad;
-    border: 1px solid rgba(216, 168, 173, 0.3);
+    background: var(--danger-soft);
+    color: var(--danger);
+    border: 1px solid var(--danger-soft);
 }
 
 /* ─── Search & Filters ─────────────────────────────────────── */
@@ -663,7 +672,7 @@
 }
 
 .filter-input {
-    background: var(--surface-1);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 10px 13px;
@@ -672,12 +681,12 @@
     font-family: var(--font);
     outline: none;
     min-width: 200px;
-    transition: border-color 0.15s;
+    transition: all 0.2s;
 }
 
 .filter-input:focus {
-    border-color: rgba(230, 210, 162, 0.44);
-    box-shadow: 0 0 0 3px rgba(200, 167, 107, 0.14);
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px var(--gold-glow);
 }
 
 .filter-input::placeholder {
@@ -705,8 +714,8 @@
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(4, 4, 8, 0.72);
-    backdrop-filter: blur(4px);
+    background: rgba(30, 26, 23, 0.1);
+    backdrop-filter: blur(10px);
     display: flex;
     align-items: center;
     justify-content: center;

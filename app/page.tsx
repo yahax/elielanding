@@ -64,7 +64,6 @@ export default function Home() {
           />
         </div>
         <p dir="rtl">© {new Date().getFullYear()} ELIE Parfum. جميع الحقوق محفوظة.</p>
-        <p dir="rtl" className="mt-2 text-xs">ماركة مغربية مسجلة | الدار البيضاء</p>
       </footer>
     </main>
   );

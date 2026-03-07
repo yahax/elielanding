@@ -27,18 +27,25 @@ export function OsGuard({ children }: { children: React.ReactNode }) {
         checkAuth();
     }, [pathname, router]);
 
-    if (!checked || (!authorized && !pathname.includes('/os/login'))) {
+    if (!checked) {
         return (
             <div style={{
                 height: '100vh',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'var(--bg)'
+                background: 'var(--bg)',
+                gap: 20
             }}>
-                <div className="animate-spin" style={{ width: 32, height: 32, border: '3px solid var(--surface-2)', borderTop: '3px solid var(--gold)', borderRadius: '50%' }} />
+                <div className="animate-spin" style={{ width: 40, height: 40, border: '3px solid var(--border)', borderTop: '3px solid var(--gold)', borderRadius: '50%' }} />
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.15em', color: 'var(--gold)', textTransform: 'uppercase' }}>Synchronisation du cockpit</div>
             </div>
         );
+    }
+
+    if (!authorized && !pathname.includes('/os/login')) {
+        return null; // Preventing flash of content before router.push takes effect
     }
 
     return <>{children}</>;

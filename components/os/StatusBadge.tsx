@@ -7,6 +7,7 @@ const STATUS_LABELS: Record<string, string> = {
     shipped: 'Expédié',
     delivered: 'Livré',
     canceled: 'Annulé',
+    callback: 'À rappeler',
 };
 
 export function StatusBadge({ status }: { status: string }) {

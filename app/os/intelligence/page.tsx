@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, AlertTriangle, Sparkles } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Sparkles, TrendingUp } from 'lucide-react';
 import { fetchOverview } from '@/lib/os/api';
 import type { OverviewResponse } from '@/lib/os/types';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/States';
@@ -46,107 +46,118 @@ export default function IntelligencePage() {
     }, [data]);
 
     return (
-        <div className="os-page">
+        <div className="os-page animate-fade-in" style={{ paddingBottom: 100 }}>
             <PageHeader
                 title="Intelligence Opérationnelle"
-                subtitle="Insights calculés à partir des données réelles commandes + stock"
+                subtitle="Insights calculés en temps réel à partir des flux de commandes et de logistique Maison ELIE"
                 actions={
-                    <button type="button" className="btn-ghost" style={{ height: 40 }} onClick={load}>
-                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                    <button type="button" className="btn-ghost" style={{ width: 44, height: 44, padding: 0, borderRadius: 14, background: 'var(--surface)' }} onClick={load}>
+                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                     </button>
                 }
             />
 
-            {loading ? <LoadingState label="Analyse des patterns de conversion et de stock." /> : null}
+            {loading ? <LoadingState label="Analyse algorithmique des patterns de conversion et de stock..." /> : null}
             {error ? <ErrorState message={error} onRetry={load} /> : null}
 
             {!loading && !error && data && data.stats.total_orders === 0 ? (
                 <EmptyState
-                    title="En attente de données"
-                    copy="L&apos;intelligence ELIE OS se déclenche automatiquement dès les premières commandes validées."
+                    title="En attente de données critiques"
+                    copy="L&apos;intelligence ELIE OS se déclenche automatiquement dès l&apos;acquisition des premiers flux confirmés."
                 />
             ) : null}
 
             {!loading && !error && data && data.stats.total_orders > 0 ? (
-                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
                     {/* Executive Insight Hero */}
-                    <div style={{
-                        padding: '40px',
+                    <div className="luxury-card" style={{
+                        padding: '50px',
                         background: 'var(--gold-glow)',
-                        borderRadius: 32,
+                        borderRadius: 36,
                         border: '1px solid var(--gold-border)',
                         position: 'relative',
                         overflow: 'hidden'
                     }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>
-                                <Sparkles size={18} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+                            <div style={{ width: 36, height: 36, borderRadius: 12, background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
+                                <Sparkles size={20} />
                             </div>
-                            <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>RECOMMANDATION STRATÉGIQUE IA</span>
+                            <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.18em' }}>RECOMMANDATION STRATÉGIQUE MAISON</span>
                         </div>
-                        <h2 style={{ fontSize: 24, fontWeight: 900, lineHeight: 1.4, color: 'var(--text)', margin: 0, maxWidth: '800px' }}>
+                        <h2 style={{ fontSize: 28, fontWeight: 900, lineHeight: 1.4, color: 'var(--text)', margin: 0, maxWidth: '900px', fontFamily: 'serif' }}>
                             {strategyText}
                         </h2>
+                        <Sparkles style={{ position: 'absolute', right: -30, bottom: -30, width: 200, height: 200, color: 'var(--gold)', opacity: 0.05 }} />
                     </div>
 
                     {/* KPI Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 28 }}>
                         <StatCard
-                            label="Confirmation Rate"
+                            label="Ratio de Confirmation"
                             value={`${data.confirmationRate}%`}
                             trend={{ value: '12%', isPositive: data.confirmationRate > 70 }}
                             accentColor="var(--success)"
                         />
                         <StatCard
-                            label="Panier Moyen"
+                            label="Revenu Moyen (AOV)"
                             value={`${data.avgBasket} MAD`}
                             accentColor="var(--gold)"
                         />
-                        <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: 24, padding: 24 }}>
-                            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: 12, letterSpacing: '0.1em' }}>Ville Dominante</div>
-                            <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--text)' }}>{topCity?.city || 'N/A'}</div>
-                            <div style={{ fontSize: 12, color: 'var(--success)', fontWeight: 700, marginTop: 4 }}>{topCity?.count || 0} commandes</div>
+                        <div className="luxury-card" style={{ padding: 28, background: 'var(--surface)' }}>
+                            <div style={{ fontSize: 10, fontWeight: 900, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: 16, letterSpacing: '0.12em' }}>Bassin Dominant</div>
+                            <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--text)', fontFamily: 'serif' }}>{topCity?.city || 'N/A'}</div>
+                            <div style={{ fontSize: 13, color: 'var(--success)', fontWeight: 800, marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <TrendingUp size={14} /> {topCity?.count || 0} flux confirmés
+                            </div>
                         </div>
-                        <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: 24, padding: 24 }}>
-                            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: 12, letterSpacing: '0.1em' }}>Best-Seller</div>
-                            <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--text)' }}>{topPerfume?.name || 'N/A'}</div>
-                            <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 700, marginTop: 4 }}>{topPerfume?.count || 0} ventes</div>
+                        <div className="luxury-card" style={{ padding: 28, background: 'var(--surface)' }}>
+                            <div style={{ fontSize: 10, fontWeight: 900, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: 16, letterSpacing: '0.12em' }}>Étendard du Catalogue</div>
+                            <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--text)', fontFamily: 'serif' }}>{topPerfume?.name || 'N/A'}</div>
+                            <div style={{ fontSize: 13, color: 'var(--gold)', fontWeight: 800, marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <Sparkles size={14} /> {topPerfume?.count || 0} acquisitions
+                            </div>
                         </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: 32 }}>
                         {/* Stock Health */}
-                        <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: 32, padding: 32 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>Santé du Stock</h3>
+                        <div className="luxury-card" style={{ padding: 40, background: 'var(--surface)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                                    <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <AlertTriangle size={20} style={{ color: data.lowStockAlerts.length > 0 ? 'var(--danger)' : 'var(--success)' }} />
+                                    </div>
+                                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, fontFamily: 'serif' }}>Santé Logistique</h3>
+                                </div>
                                 {data.lowStockAlerts.length > 0 && (
-                                    <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', padding: '4px 10px', borderRadius: 8, fontSize: 10, fontWeight: 900 }}>
+                                    <div style={{ background: 'var(--danger-glow)', color: 'var(--danger)', padding: '6px 14px', borderRadius: 10, fontSize: 10, fontWeight: 900, letterSpacing: '0.05em' }}>
                                         ALERTES ACTIVES
                                     </div>
                                 )}
                             </div>
 
                             {data.lowStockAlerts.length === 0 ? (
-                                <div style={{ padding: '40px 0', textAlign: 'center', opacity: 0.5, fontSize: 14, fontWeight: 600 }}>Tous les niveaux sont nominaux</div>
+                                <div style={{ padding: '60px 0', textAlign: 'center', opacity: 0.5, fontSize: 15, fontWeight: 700 }}>Tous les niveaux opérationnels sont optimaux</div>
                             ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                                     {data.lowStockAlerts.map((alert) => (
                                         <div key={alert.perfume_id} style={{
-                                            padding: '16px 20px',
-                                            background: 'rgba(255,255,255,0.02)',
-                                            borderRadius: 16,
+                                            padding: '20px 24px',
+                                            background: 'var(--bg-elevated)',
+                                            borderRadius: 20,
                                             border: '1px solid var(--border)',
                                             display: 'flex',
                                             justifyContent: 'space-between',
-                                            alignItems: 'center'
+                                            alignItems: 'center',
+                                            transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
                                         }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444', boxShadow: '0 0 10px #EF4444' }} />
-                                                <span style={{ fontWeight: 800, fontSize: 14 }}>{alert.name}</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                                                <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--danger)', boxShadow: '0 0 12px var(--danger)' }} />
+                                                <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>{alert.name}</span>
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
-                                                <div style={{ fontSize: 16, fontWeight: 900, color: '#EF4444' }}>{alert.stock}</div>
-                                                <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Unités</div>
+                                                <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--danger)' }}>{alert.stock}</div>
+                                                <div style={{ fontSize: 10, fontWeight: 900, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Unités en Stock</div>
                                             </div>
                                         </div>
                                     ))}
@@ -154,25 +165,30 @@ export default function IntelligencePage() {
                             )}
                         </div>
 
-                        {/* Roadmap */}
-                        <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: 32, padding: 32 }}>
-                            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, marginBottom: 24 }}>Objectifs Prioritaires</h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        {/* Priorities */}
+                        <div className="luxury-card" style={{ padding: 40, background: 'var(--surface)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 32 }}>
+                                <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <TrendingUp size={20} style={{ color: 'var(--gold)' }} />
+                                </div>
+                                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, fontFamily: 'serif' }}>Objectifs Prioritaires</h3>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                                 {[
                                     { id: 1, text: "Optimiser le cycle de vie client par des relances SMS ciblées sur les commandes non confirmées.", icon: "01" },
-                                    { id: 2, text: "Renforcer les stocks sur les best-sellers avant le pic saisonnier identifié par l'algorithme.", icon: "02" },
-                                    { id: 3, text: "Consolider la logistique sur l'axe Casablanca-Rabat pour réduire les délais de livraison.", icon: "03" }
+                                    { id: 2, text: "Renforcer les stocks sur les best-sellers avant le pic saisonnier identifié par l'algorithme Maison.", icon: "02" },
+                                    { id: 3, text: "Consolider l'efficience logistique sur l'axe Casablanca-Rabat pour réduire les délais finaux.", icon: "03" }
                                 ].map(item => (
-                                    <div key={item.id} style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+                                    <div key={item.id} style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
                                         <div style={{
-                                            minWidth: 40, width: 40, height: 40, borderRadius: 12,
-                                            background: 'var(--surface-3)', border: '1px solid var(--border)',
+                                            minWidth: 44, width: 44, height: 44, borderRadius: 14,
+                                            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontSize: 12, fontWeight: 900, color: 'var(--gold)'
+                                            fontSize: 13, fontWeight: 900, color: 'var(--gold)'
                                         }}>
                                             {item.icon}
                                         </div>
-                                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-dim)', lineHeight: 1.6, paddingTop: 6 }}>
+                                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-dim)', lineHeight: 1.6, paddingTop: 8 }}>
                                             {item.text}
                                         </div>
                                     </div>

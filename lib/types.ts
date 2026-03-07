@@ -9,7 +9,8 @@ export type OrderStatus =
     | 'confirmed'
     | 'shipped'
     | 'delivered'
-    | 'canceled';
+    | 'canceled'
+    | 'callback';
 
 export type OrderSource = 'whatsapp' | 'direct' | 'meta_ads' | 'organic' | 'other' | 'landing_page' | string;
 export type PackType = 'homme' | 'femme' | 'mixte';
@@ -116,8 +117,9 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
     shipped: 'Expédié',
     delivered: 'Livré',
     canceled: 'Annulé',
+    callback: 'À rappeler',
 };
 
 export const STATUS_LIST: OrderStatus[] = [
-    'new', 'to_confirm', 'confirmed', 'shipped', 'delivered', 'canceled',
+    'new', 'to_confirm', 'confirmed', 'shipped', 'delivered', 'canceled', 'callback'
 ];

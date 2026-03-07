@@ -50,6 +50,7 @@ export interface FetchOrdersParams {
   search?: string;
   limit?: number;
   pipeline?: boolean;
+  days?: number;
 }
 
 export async function fetchOrders(params: FetchOrdersParams = {}) {
@@ -60,6 +61,7 @@ export async function fetchOrders(params: FetchOrdersParams = {}) {
   if (params.search) searchParams.set("search", params.search);
   if (params.limit) searchParams.set("limit", String(params.limit));
   if (params.pipeline) searchParams.set("pipeline", "1");
+  if (params.days) searchParams.set("days", String(params.days));
 
   const suffix = searchParams.toString() ? `?${searchParams.toString()}` : "";
   return osFetch<{ orders: NormalizedOrder[] }>(`/api/os/orders${suffix}`, { noStore: true });

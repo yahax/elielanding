@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { RefreshCw } from 'lucide-react';
 import {
     DndContext,
     DragOverlay,
@@ -105,7 +106,7 @@ export default function PipelinePage() {
         setIsDrawerOpen(true);
     };
 
-    const columns = STATUS_LIST.filter(s => s !== 'delivered' && s !== 'canceled');
+    const columns: OrderStatus[] = ['new', 'callback', 'to_confirm', 'confirmed', 'shipped'];
 
     // Group orders by status for easier rendering
     const ordersByStatus = columns.reduce((acc, status) => {
@@ -116,30 +117,31 @@ export default function PipelinePage() {
     if (loading && orders.length === 0) return <LoadingState label="Chargement du Pipeline…" />;
 
     return (
-        <div className="animate-fade-in" style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column', width: '100%' }}>
+        <div className="os-page animate-fade-in" style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', width: '100%', paddingBottom: 0 }}>
             <OsToaster />
             <PageHeader
                 title="Pipeline Opérationnel"
-                subtitle="Gestion haute fidélité des flux logistiques et confirmations"
+                subtitle="Pilotage haute fidélité des flux de confirmation et logistique"
                 actions={
                     <div style={{ display: 'flex', gap: 12 }}>
                         <div style={{
-                            padding: '8px 16px',
-                            borderRadius: 12,
-                            background: 'var(--surface-2)',
+                            padding: '8px 20px',
+                            borderRadius: 14,
+                            background: 'var(--surface)',
                             border: '1px solid var(--border)',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 8,
-                            fontSize: 12,
-                            fontWeight: 700,
-                            color: 'var(--text-muted)'
+                            gap: 10,
+                            fontSize: 10,
+                            fontWeight: 900,
+                            letterSpacing: '0.1em',
+                            color: 'var(--text-dim)'
                         }}>
-                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 10px var(--success)' }} />
-                            SYNC LIVE
+                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--success)' }} />
+                            FLUX RÉEL
                         </div>
-                        <button className="btn btn-primary btn-sm">
-                            Nouvelle Commande
+                        <button className="btn-ghost" onClick={() => loadOrders()} style={{ width: 44, height: 44, padding: 0, borderRadius: 14, background: 'var(--surface)' }}>
+                            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                         </button>
                     </div>
                 }
@@ -156,8 +158,8 @@ export default function PipelinePage() {
                     gap: 24,
                     flex: 1,
                     overflowX: 'auto',
-                    paddingBottom: 20,
-                    paddingRight: 20,
+                    paddingBottom: 24,
+                    paddingRight: 10,
                     scrollBehavior: 'smooth'
                 }}>
                     {columns.map((columnId) => (
@@ -168,8 +170,8 @@ export default function PipelinePage() {
                                 width: 340,
                                 display: 'flex',
                                 flexDirection: 'column',
-                                background: 'rgba(255,255,255,0.01)',
-                                borderRadius: 20,
+                                background: 'var(--bg-elevated)',
+                                borderRadius: 28,
                                 border: '1px solid var(--border)',
                                 padding: '12px'
                             }}
@@ -178,39 +180,43 @@ export default function PipelinePage() {
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
-                                padding: '12px 16px',
-                                marginBottom: 16,
-                                background: 'var(--surface-2)',
-                                borderRadius: 12,
-                                border: '1px solid var(--border)'
+                                padding: '18px 20px',
+                                marginBottom: 14,
+                                background: 'var(--surface)',
+                                borderRadius: 20,
+                                border: '1px solid var(--border)',
+                                boxShadow: 'var(--shadow-sm)'
                             }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                     <div style={{
-                                        width: 8,
-                                        height: 8,
+                                        width: 10,
+                                        height: 10,
                                         borderRadius: '50%',
                                         background: columnId === 'new' ? 'var(--gold)' :
                                             columnId === 'to_confirm' ? 'var(--warning)' :
                                                 columnId === 'confirmed' ? 'var(--success)' :
-                                                    columnId === 'shipped' ? 'var(--info)' : 'var(--text-dim)'
+                                                    columnId === 'shipped' ? 'var(--info)' :
+                                                        columnId === 'callback' ? 'var(--info)' : 'var(--text-dim)',
+                                        boxShadow: `0 0 10px ${columnId === 'new' ? 'rgba(201, 168, 106, 0.3)' : 'transparent'}`
                                     }} />
-                                    <h3 style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                                    <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0, color: 'var(--text)' }}>
                                         {STATUS_LABELS[columnId]}
                                     </h3>
                                 </div>
                                 <span style={{
                                     fontSize: 11,
-                                    fontWeight: 800,
-                                    background: 'rgba(255,255,255,0.05)',
-                                    padding: '2px 8px',
-                                    borderRadius: 6,
-                                    color: 'var(--text-dim)'
+                                    fontWeight: 900,
+                                    color: 'var(--gold)',
+                                    background: 'var(--gold-glow)',
+                                    padding: '4px 12px',
+                                    borderRadius: 10,
+                                    border: '1px solid var(--gold-border)'
                                 }}>
                                     {ordersByStatus[columnId]?.length || 0}
                                 </span>
                             </div>
 
-                            <div style={{ flex: 1, overflowY: 'auto', padding: '4px' }}>
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '4px' }} className="custom-scrollbar">
                                 <SortableContext items={(ordersByStatus[columnId] || []).map(o => o.id)} strategy={verticalListSortingStrategy}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                         {(ordersByStatus[columnId] || []).map((order) => (
@@ -218,13 +224,14 @@ export default function PipelinePage() {
                                         ))}
                                         {(!ordersByStatus[columnId] || ordersByStatus[columnId].length === 0) && (
                                             <div style={{
-                                                padding: '40px 20px',
+                                                padding: '48px 20px',
                                                 textAlign: 'center',
                                                 border: '2px dashed var(--border)',
-                                                borderRadius: 16,
-                                                opacity: 0.4
+                                                borderRadius: 22,
+                                                opacity: 0.4,
+                                                background: 'rgba(0,0,0,0.01)'
                                             }}>
-                                                <div style={{ fontSize: 11, fontWeight: 700 }}>AUCUN FLUX</div>
+                                                <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-dim)', letterSpacing: '0.1em' }}>AUCUN FLUX</div>
                                             </div>
                                         )}
                                     </div>

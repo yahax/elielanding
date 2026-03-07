@@ -48,16 +48,15 @@ export function Sidebar() {
                     className="sidebar-logo-text"
                     style={{
                         fontSize: 20,
-                        letterSpacing: '0.25em',
-                        fontWeight: 900,
-                        background: 'linear-gradient(to right, var(--gold), var(--gold-soft))',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent'
+                        letterSpacing: '0.15em',
+                        fontWeight: 700,
+                        color: 'var(--gold)',
+                        fontFamily: 'serif'
                     }}
                 >
                     ELIE
                 </div>
-                <div className="sidebar-logo-sub" style={{ fontSize: 9, opacity: 0.5, letterSpacing: '0.15em' }}>OPERATING SYSTEM</div>
+                <div className="sidebar-logo-sub" style={{ fontSize: 9, opacity: 0.6, letterSpacing: '0.05em', fontWeight: 800, color: 'var(--text-muted)' }}>MAISON ELIE</div>
             </div>
 
             <div className="sidebar-nav">
@@ -71,17 +70,16 @@ export function Sidebar() {
                             href={item.href}
                             className={`sidebar-item ${isActive ? 'active' : ''}`}
                         >
-                            <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className="sidebar-item-icon" />
+                            <Icon size={16} strokeWidth={isActive ? 2.5 : 2} className="sidebar-item-icon" />
                             <span>{item.label}</span>
                             {isActive && (
                                 <div className="active-glow" style={{
                                     position: 'absolute',
-                                    left: 0,
-                                    width: 2,
-                                    height: 20,
+                                    right: 12,
+                                    width: 4,
+                                    height: 4,
                                     background: 'var(--gold)',
-                                    boxShadow: '0 0 10px var(--gold)',
-                                    borderRadius: '0 100px 100px 0'
+                                    borderRadius: '50%'
                                 }} />
                             )}
                         </Link>
@@ -89,7 +87,7 @@ export function Sidebar() {
                 })}
 
                 <div className="sidebar-section-label">Opérations</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {NAV_ITEMS.filter((item) => OPERATIONS.has(item.href)).map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname.startsWith(item.href);
@@ -99,17 +97,17 @@ export function Sidebar() {
                                 href={item.href}
                                 className={`sidebar-item ${isActive ? 'active' : ''}`}
                             >
-                                <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className="sidebar-item-icon" />
+                                <Icon size={16} strokeWidth={isActive ? 2.5 : 2} className="sidebar-item-icon" />
                                 <span>{item.label}</span>
                                 {isActive && (
                                     <div className="active-glow" style={{
                                         position: 'absolute',
-                                        left: 0,
-                                        width: 2,
-                                        height: 20,
+                                        right: 12,
+                                        width: 4,
+                                        height: 4,
                                         background: 'var(--gold)',
-                                        boxShadow: '0 0 10px var(--gold)',
-                                        borderRadius: '0 100px 100px 0'
+                                        borderRadius: '50%',
+                                        boxShadow: '0 0 8px var(--gold-border)'
                                     }} />
                                 )}
                             </Link>
@@ -117,8 +115,8 @@ export function Sidebar() {
                     })}
                 </div>
 
-                <div className="sidebar-section-label">Intelligence Strategique</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div className="sidebar-section-label">Intelligence</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {NAV_ITEMS.filter((item) => INSIGHTS.has(item.href)).map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname.startsWith(item.href);
@@ -128,31 +126,16 @@ export function Sidebar() {
                                 href={item.href}
                                 className={`sidebar-item ${isActive ? 'active' : ''}`}
                             >
-                                <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className="sidebar-item-icon" />
+                                <Icon size={16} strokeWidth={isActive ? 2.5 : 2} className="sidebar-item-icon" />
                                 <span>{item.label}</span>
-                                {item.label === 'Intelligence' && (
-                                    <div style={{
-                                        marginLeft: 'auto',
-                                        padding: '2px 6px',
-                                        borderRadius: 6,
-                                        fontSize: 9,
-                                        fontWeight: 800,
-                                        background: 'rgba(200, 167, 107, 0.1)',
-                                        border: '1px solid rgba(200, 167, 107, 0.2)',
-                                        color: 'var(--gold)'
-                                    }}>
-                                        CORE AI
-                                    </div>
-                                )}
                                 {isActive && (
                                     <div className="active-glow" style={{
                                         position: 'absolute',
-                                        left: 0,
-                                        width: 2,
-                                        height: 20,
+                                        right: 12,
+                                        width: 4,
+                                        height: 4,
                                         background: 'var(--gold)',
-                                        boxShadow: '0 0 10px var(--gold)',
-                                        borderRadius: '0 100px 100px 0'
+                                        borderRadius: '50%'
                                     }} />
                                 )}
                             </Link>
@@ -165,9 +148,9 @@ export function Sidebar() {
                 <button
                     onClick={handleLogout}
                     className="sidebar-item"
-                    style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.7 }}
+                    style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.8 }}
                 >
-                    <LogOut size={18} className="sidebar-item-icon" />
+                    <LogOut size={16} className="sidebar-item-icon" />
                     <span>Déconnexion</span>
                 </button>
             </div>

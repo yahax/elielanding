@@ -34,39 +34,30 @@ export async function GET() {
       .from("shop_settings")
       .select("*")
       .eq("id", "global")
-      .maybeSingle();
+      .single(); // Changed from maybeSingle() to single()
 
     if (error) {
-      if (isMissingTableError(error)) {
-        console.warn("[SETTINGS] shop_settings table missing, using defaults");
-        return NextResponse.json(
-          {
-            settings: defaultSettings,
-            configured: false,
-            message: "Table 'shop_settings' introuvable. Utilisez les réglages par défaut ou initialisez la base.",
-          },
-          { status: 200 }
-        );
+      // If table missing or row missing, return default
+      if (error.code === 'PGRST116' || error.code === 'PGRST204' || error.code === '42P01') {
+        console.warn("[SETTINGS] shop_settings table missing or row not found, using defaults");
+        return NextResponse.json({
+          settings: defaultSettings, // Using defaultSettings
+          configured: false,
+          message: 'Table shop_settings introuvable ou non configurée'
+        }, { status: 200 });
       }
-      return NextResponse.json({ error: error.message, details: error }, { status: 400 });
+      throw error; // Re-throw other errors
     }
 
     return NextResponse.json(
       {
-        settings: {
-          shop_name: data?.shop_name || defaultSettings.shop_name,
-          support_email: data?.support_email || defaultSettings.support_email,
-          whatsapp: data?.whatsapp || defaultSettings.whatsapp,
-          auto_validate: data?.auto_validate ?? defaultSettings.auto_validate,
-          low_stock_alert: data?.low_stock_alert ?? defaultSettings.low_stock_alert,
-          currency: data?.currency || defaultSettings.currency,
-          timezone: data?.timezone || defaultSettings.timezone,
-        },
+        settings: data || defaultSettings, // If data is null (shouldn't happen with single() unless error), use defaults
         configured: !!data,
       },
       { status: 200 }
     );
   } catch (error: unknown) {
+    console.error('[Settings/API] GET error:', error);
     const message = error instanceof Error ? error.message : "Unable to load settings";
     return NextResponse.json({ error: message }, { status: 500 });
   }

@@ -9,6 +9,7 @@ const querySchema = z.object({
   pack: z.string().optional(),
   search: z.string().optional(),
   limit: z.coerce.number().int().positive().optional(),
+  days: z.coerce.number().int().positive().optional(),
   pipeline: z
     .string()
     .optional()
@@ -34,6 +35,7 @@ export async function GET(req: Request) {
       search: filters.search,
       limit: filters.limit,
       pipeline: filters.pipeline,
+      days: filters.days,
     });
 
     return NextResponse.json({ orders }, { status: 200 });
