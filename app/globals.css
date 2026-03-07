@@ -1,26 +1,401 @@
 @import "tailwindcss";
 
+@theme {
+  --color-primary: #C9A86A;
+  --color-primary-hover: #D6B87E;
+  --color-primary-soft: rgba(201, 168, 106, 0.12);
+  --color-primary-ring: rgba(201, 168, 106, 0.35);
+  --color-primary-border: rgba(201, 168, 106, 0.25);
+
+  --color-whatsapp: #0B7A3B;
+  --color-whatsapp-hover: #0A6B34;
+  --color-whatsapp-soft: rgba(11, 122, 59, 0.15);
+
+  --color-surface: #ffffff;
+  --color-surface-soft: #fcf8f5;
+  --color-surface-border: rgba(0, 0, 0, 0.08);
+
+  --font-sans: var(--font-noto-kufi), system-ui, sans-serif;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --background: #F7D7C8;
+  --foreground: #1E1E1E;
+  --primary: #C9A86A;
+  --primary-hover: #D6B87E;
+  --primary-soft: rgba(201, 168, 106, 0.12);
+  --ring: rgba(201, 168, 106, 0.35);
+  --border: rgba(0, 0, 0, 0.08);
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --surface: #ffffff;
+  --surface-raised: #fcf8f5;
+  --surface-overlay: rgba(255, 255, 255, 0.8);
+  --muted: #6B7280;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --whatsapp: #0B7A3B;
+  --whatsapp-hover: #0A6B34;
+
+  /* Spacing Scale (Apple-style) */
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Safe area */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
 }
 
 body {
-  background: var(--background);
+  background: linear-gradient(135deg, #F7D7C8 0%, #F4E6D4 100%);
+  background-attachment: fixed;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Texture grain (subtle) */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.02;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3column%3Efilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  z-index: 100;
+}
+
+/* =============================
+   GLASS UTILITY
+ ============================== */
+.glass {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* =============================
+   GRADIENT UTILITIES
+============================== */
+.primary-gradient {
+  background: linear-gradient(135deg, #B8933F 0%, #C6A34E 50%, #D4AF37 100%);
+}
+
+.primary-text-gradient {
+  background: linear-gradient(135deg, #C9A86A 0%, #D6B87E 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.whatsapp-gradient {
+  background: linear-gradient(135deg, #0A6B34 0%, #0B7A3B 50%, #0D8F45 100%);
+}
+
+.whatsapp-glow {
+  box-shadow: 0 0 30px rgba(11, 122, 59, 0.25);
+}
+
+.gold-glow {
+  box-shadow: 0 0 40px rgba(201, 168, 106, 0.3);
+}
+
+.whatsapp-glow {
+  box-shadow: 0 0 40px rgba(11, 122, 59, 0.3);
+}
+
+/* =============================
+   ANIMATIONS – HERO TEXT
+============================== */
+@keyframes heroReveal {
+  from {
+    opacity: 0;
+    filter: blur(12px);
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+.hero-text-animate {
+  animation: heroReveal 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hero-text-delay-1 {
+  animation-delay: 80ms;
+}
+
+.hero-text-delay-2 {
+  animation-delay: 160ms;
+}
+
+.hero-text-delay-3 {
+  animation-delay: 240ms;
+}
+
+/* =============================
+   SHIMMER (WhatsApp CTA)
+============================== */
+@keyframes shimmerSlide {
+  0% {
+    transform: translateX(150%) skewX(-20deg);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.6;
+  }
+
+  60% {
+    opacity: 0.2;
+  }
+
+  100% {
+    transform: translateX(-150%) skewX(-20deg);
+    opacity: 0;
+  }
+}
+
+/* Repeats every ~7s: 0.6s active shimmer, 6.4s pause */
+@keyframes shimmerCycle {
+  0% {
+    transform: translateX(150%) skewX(-20deg);
+    opacity: 0;
+  }
+
+  0.01% {
+    opacity: 0.55;
+  }
+
+  8.57% {
+    transform: translateX(-150%) skewX(-20deg);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateX(150%) skewX(-20deg);
+    opacity: 0;
+  }
+}
+
+.wa-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.wa-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.32) 50%, transparent 100%);
+  width: 60%;
+  animation: shimmerCycle 7s ease-in-out infinite;
+}
+
+/* =============================
+   TRUST BADGES – POP ANIMATION
+============================== */
+@keyframes badgePop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.badge-pop {
+  animation: badgePop 200ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.badge-pop-delay-1 {
+  animation-delay: 160ms;
+}
+
+.badge-pop-delay-2 {
+  animation-delay: 280ms;
+}
+
+.badge-pop-delay-3 {
+  animation-delay: 400ms;
+}
+
+/* =============================
+   SEGMENTED CONTROL
+============================== */
+.segmented-control {
+  display: flex;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 4px;
+  gap: 2px;
+  position: relative;
+}
+
+.seg-tab {
+  flex: 1;
+  padding: 10px 8px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  transition: color 200ms ease, background 200ms ease;
+  color: rgba(255, 255, 255, 0.45);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+  z-index: 1;
+}
+
+.seg-tab.active {
+  color: #fff;
+  background: rgba(198, 163, 78, 0.18);
+  box-shadow: 0 1px 6px rgba(198, 163, 78, 0.22),
+    inset 0 0 0 1px rgba(198, 163, 78, 0.38);
+}
+
+/* =============================
+   CATALOG CARD MICRO-INTERACTIONS
+============================== */
+.card-tap {
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.card-tap:active {
+  transform: scale(0.99);
+}
+
+.card-active {
+  box-shadow: 0 0 0 1.5px rgba(198, 163, 78, 0.55),
+    0 8px 32px rgba(198, 163, 78, 0.12);
+}
+
+/* =============================
+   STICKY WA BUTTON - MOBILE
+============================== */
+.sticky-wa-btn {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + var(--safe-bottom));
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.96) 70%, transparent);
+  display: none;
+  /* shown by media query */
+}
+
+@media (max-width: 767px) {
+  .sticky-wa-btn {
+    display: block;
+  }
+}
+
+.sticky-wa-btn-inner {
+  width: 100%;
+  height: 56px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #0A6B34 0%, #0B7A3B 50%, #0D8F45 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  border: 0;
+  box-shadow: 0 8px 28px rgba(11, 122, 59, 0.38);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  text-decoration: none;
+}
+
+/* =============================
+   PROGRESS BAR – STICKY (mobile)
+============================== */
+.progress-sticky {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 55;
+  padding-bottom: var(--safe-bottom);
+  pointer-events: none;
+}
+
+/* =============================
+   SMOOTH SCROLL & SCROLLBAR
+============================== */
+html {
+  scroll-behavior: smooth;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1a1a1a;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2a2a2a;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Prevent image dragging */
+img {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* =============================
+   PARALLAX DECORATION
+============================== */
+.parallax-deco {
+  will-change: transform;
+  transition: transform 60ms linear;
+}
+
+/* =============================
+   MODAL KEYBOARD SAFE
+============================== */
+.modal-scroll-safe {
+  max-height: calc(var(--vh, 1vh) * 90);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }

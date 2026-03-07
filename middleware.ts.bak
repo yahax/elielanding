@@ -1,0 +1,37 @@
+import { NextResponse, type NextRequest } from 'next/server';
+
+/**
+ * Middleware — simple cookie-based auth for dashboard routes.
+ * Landing page (/) and public routes pass through.
+ * Dashboard routes require the elie_session cookie.
+ */
+export async function middleware(request: NextRequest) {
+    const { pathname } = request.nextUrl;
+
+    // Always allow: landing page, login, API routes, static assets
+    if (
+        pathname === '/' ||
+        pathname.startsWith('/dashboard/login') ||
+        pathname.startsWith('/api/') ||
+        pathname.startsWith('/_next') ||
+        pathname.match(/\.(ico|png|jpg|svg|webp|css|js|woff2?)$/)
+    ) {
+        return NextResponse.next();
+    }
+
+    // Dashboard routes: check for session cookie
+    if (pathname.startsWith('/dashboard')) {
+        const session = request.cookies.get('elie_session');
+        if (!session || session.value !== 'authenticated') {
+            const loginUrl = new URL('/dashboard/login', request.url);
+            loginUrl.searchParams.set('redirect', pathname);
+            return NextResponse.redirect(loginUrl);
+        }
+    }
+
+    return NextResponse.next();
+}
+
+export const config = {
+    matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)'],
+};
