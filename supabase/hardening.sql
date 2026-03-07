@@ -4,6 +4,10 @@
 
 -- 1. Secure Transactional Order Creation
 -- Handles CRM, Order, Items, and Stock in one atomic step.
+-- Drop legacy signatures first to avoid stale schema-cache behavior.
+DROP FUNCTION IF EXISTS create_order_secure(TEXT, TEXT, TEXT, TEXT, TEXT, INT, TEXT, TEXT[]);
+DROP FUNCTION IF EXISTS create_order_secure(TEXT, TEXT, TEXT, TEXT, TEXT, INT, TEXT, TEXT[], TEXT, JSONB);
+
 CREATE OR REPLACE FUNCTION create_order_secure(
     p_customer_name TEXT,
     p_phone TEXT,
@@ -19,9 +23,12 @@ CREATE OR REPLACE FUNCTION create_order_secure(
 DECLARE
     v_order_id UUID;
     v_perfume_name TEXT;
+    v_perfume_id UUID;
+    v_has_perfume_inventory BOOLEAN := to_regclass('public.inventory') IS NOT NULL AND to_regclass('public.perfumes') IS NOT NULL;
+    v_has_products BOOLEAN := to_regclass('public.products') IS NOT NULL;
 BEGIN
     -- 1. Validate Input
-    IF array_length(p_perfumes, 1) < 6 THEN
+    IF COALESCE(array_length(p_perfumes, 1), 0) <> 6 THEN
         RAISE EXCEPTION 'Une commande ELIE nécessite exactement 6 parfums.';
     END IF;
 
@@ -68,11 +75,26 @@ BEGIN
     -- 3. Process Perfumes (Stock decrement)
     FOREACH v_perfume_name IN ARRAY p_perfumes
     LOOP
-        -- a. Check & Decrement Stock in 'products' table (Universal catalog)
-        UPDATE products 
-        SET stock = stock - 1, 
-            updated_at = now()
-        WHERE name = v_perfume_name AND stock > 0;
+        -- Production schema (perfumes + inventory)
+        IF v_has_perfume_inventory THEN
+            SELECT id INTO v_perfume_id
+            FROM perfumes
+            WHERE name = v_perfume_name
+            LIMIT 1;
+
+            IF v_perfume_id IS NOT NULL THEN
+                UPDATE inventory
+                SET stock = GREATEST(stock - 1, 0),
+                    updated_at = now()
+                WHERE perfume_id = v_perfume_id AND stock > 0;
+            END IF;
+        -- Legacy schema fallback (products table only)
+        ELSIF v_has_products THEN
+            UPDATE products
+            SET stock = GREATEST(stock - 1, 0),
+                updated_at = now()
+            WHERE name = v_perfume_name AND stock > 0;
+        END IF;
     END LOOP;
 
     RETURN v_order_id;

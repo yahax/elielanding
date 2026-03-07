@@ -36,19 +36,35 @@ export interface ElieOSOrderPayload {
     };
 }
 
-const ORDERS_API_ENDPOINT = "/api/orders";
+const SAFE_ORDERS_API_ENDPOINT = "/api/orders";
+
+function resolveOrdersApiEndpoint(): string {
+    const configured = process.env.NEXT_PUBLIC_ELIE_OS_ENDPOINT?.trim();
+
+    // Security hard-stop:
+    // checkout must never call Supabase REST (or any external origin) from the browser.
+    // Only allow same-origin API route calls.
+    if (!configured || configured === "") return SAFE_ORDERS_API_ENDPOINT;
+
+    const isSafeInternalOrdersRoute = /^\/api\/orders(?:[/?#]|$)/.test(configured);
+    if (isSafeInternalOrdersRoute) return configured;
+
+    if (typeof window !== "undefined") {
+        console.warn(
+            `[ELIE] Ignoring unsafe NEXT_PUBLIC_ELIE_OS_ENDPOINT="${configured}". Using ${SAFE_ORDERS_API_ENDPOINT}.`
+        );
+    }
+
+    return SAFE_ORDERS_API_ENDPOINT;
+}
 
 /**
  * Sends a normalized order payload to ELIE OS.
  */
 export async function submitOrderToElieOS(payload: ElieOSOrderPayload): Promise<{ success: boolean; error?: string; orderId?: string }> {
-    console.log("[ELIE OS] >>> Submitting order to ELIE OS...");
-    console.log("[ELIE OS] Endpoint:", ORDERS_API_ENDPOINT);
-    console.log("[ELIE OS] Payload:", JSON.stringify(payload, null, 2));
-
     try {
-        const startTime = Date.now();
-        const response = await fetch(ORDERS_API_ENDPOINT, {
+        const endpoint = resolveOrdersApiEndpoint();
+        const response = await fetch(endpoint, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -56,17 +72,11 @@ export async function submitOrderToElieOS(payload: ElieOSOrderPayload): Promise<
             body: JSON.stringify(payload),
         });
 
-        const duration = Date.now() - startTime;
-        console.log(`[ELIE OS] Response status: ${response.status} (${duration}ms)`);
-
         const responseData = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-            console.error("[ELIE OS] Server rejected request:", responseData);
             throw new Error(responseData.error || `Server error: ${response.status}`);
         }
-
-        console.log("[ELIE OS] <<< Success! Order confirmed:", responseData);
 
         return {
             success: true,
@@ -74,7 +84,6 @@ export async function submitOrderToElieOS(payload: ElieOSOrderPayload): Promise<
         };
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "Unknown error occurred";
-        console.error("[ELIE OS] <<< Submission failed:", error);
         return {
             success: false,
             error: message

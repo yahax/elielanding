@@ -11,7 +11,7 @@ export type OrderStatus =
     | 'delivered'
     | 'canceled';
 
-export type OrderSource = 'whatsapp' | 'direct' | 'meta_ads' | 'organic' | 'other';
+export type OrderSource = 'whatsapp' | 'direct' | 'meta_ads' | 'organic' | 'other' | 'landing_page' | string;
 export type PackType = 'homme' | 'femme' | 'mixte';
 
 // ── Product (Replacement for Perfume) ─────────────────────
@@ -47,7 +47,7 @@ export interface Customer {
 // ── Order ─────────────────────────────────────────────────
 export interface Order {
     id: string;
-    customer_id: string | null;
+    customer_id?: string | null;
     customer_name: string | null;
     phone: string | null;
     city: string | null;
@@ -121,4 +121,3 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
 export const STATUS_LIST: OrderStatus[] = [
     'new', 'to_confirm', 'confirmed', 'shipped', 'delivered', 'canceled',
 ];
-

@@ -50,10 +50,10 @@ The app runs on port 3000 by default (`PORT=3000`).
 ## Step 5: Verify
 
 1. Open `https://elie.ma` → landing page should load
-2. Open `https://elie.ma/dashboard/login` → enter password
-3. Check `/dashboard/inventory` → should show 49 perfumes with stock=10
+2. Open `https://elie.ma/os/login` → enter password
+3. Check `/os/inventory` → should show 49 perfumes with stock=10
 4. Submit a test order from landing page
-5. Check `/dashboard/orders` → order should appear
+5. Check `/os/orders` → order should appear
 
 ## Switching Offer Mode
 

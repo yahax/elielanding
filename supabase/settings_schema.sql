@@ -21,5 +21,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- RLS
 ALTER TABLE shop_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public read settings" ON shop_settings;
+DROP POLICY IF EXISTS "Auth manage settings" ON shop_settings;
 CREATE POLICY "Public read settings" ON shop_settings FOR SELECT USING (true);
 CREATE POLICY "Auth manage settings" ON shop_settings FOR ALL USING (auth.role() = 'authenticated');

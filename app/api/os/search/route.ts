@@ -1,0 +1,71 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { createServiceSupabaseClient } from "@/lib/supabase/server";
+
+const querySchema = z.object({
+  q: z.string().min(2),
+});
+
+export async function GET(req: Request) {
+  try {
+    const url = new URL(req.url);
+    const parsed = querySchema.safeParse(Object.fromEntries(url.searchParams.entries()));
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Search query must be at least 2 characters" },
+        { status: 400 }
+      );
+    }
+
+    const q = parsed.data.q.trim();
+    const supabase = createServiceSupabaseClient();
+
+    const [{ data: orders, error: ordersError }, { data: perfumes, error: perfumesError }] =
+      await Promise.all([
+        supabase
+          .from("orders")
+          .select("id,customer_name,phone,city,status,created_at")
+          .or(`customer_name.ilike.%${q}%,phone.ilike.%${q}%,city.ilike.%${q}%`)
+          .order("created_at", { ascending: false })
+          .limit(8),
+        supabase
+          .from("perfumes")
+          .select("id,name,gender,tier")
+          .ilike("name", `%${q}%`)
+          .limit(8),
+      ]);
+
+    if (ordersError) {
+      return NextResponse.json({ error: ordersError.message, details: ordersError }, { status: 400 });
+    }
+    if (perfumesError) {
+      return NextResponse.json({ error: perfumesError.message, details: perfumesError }, { status: 400 });
+    }
+
+    const results = [
+      ...(orders || []).map((order) => ({
+        type: "order",
+        id: order.id,
+        title: order.customer_name || "Client inconnu",
+        subtitle: `${order.city || "Ville inconnue"} • ${order.phone || "Sans téléphone"}`,
+        href: "/os/orders",
+        rank: 1,
+      })),
+      ...(perfumes || []).map((perfume) => ({
+        type: "product",
+        id: perfume.id,
+        title: perfume.name,
+        subtitle: `${perfume.gender || "mixte"} • ${perfume.tier || "classic"}`,
+        href: "/os/products",
+        rank: 2,
+      })),
+    ]
+      .sort((a, b) => a.rank - b.rank)
+      .slice(0, 12);
+
+    return NextResponse.json({ results }, { status: 200 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unable to search";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
