@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Noto_Kufi_Arabic } from "next/font/google";
+import { Cormorant_Garamond, Noto_Kufi_Arabic } from "next/font/google";
 import "./globals.css";
 
 const notoKufi = Noto_Kufi_Arabic({
@@ -8,9 +8,15 @@ const notoKufi = Noto_Kufi_Arabic({
   variable: "--font-noto-kufi",
 });
 
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-display",
+});
+
 export const metadata: Metadata = {
-  title: "ELIE Parfum | 5 عطور + 1 مجانا",
-  description: "عرض رمضان الحصري من إيلي بارفان. توصيل مجاني والدفع عند الاستلام.",
+  title: "ELIE Parfum | 5+1 Offert",
+  description: "Experience premium ELIE Parfum: choisissez 5 parfums et recevez le 6eme offert avec livraison gratuite.",
   icons: {
     icon: [
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
@@ -27,8 +33,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html dir="rtl" lang="ar" className={`${notoKufi.variable}`} suppressHydrationWarning>
-      <body className="bg-black text-white antialiased font-sans" suppressHydrationWarning>
+    <html dir="ltr" lang="fr" className={`${notoKufi.variable} ${cormorant.variable}`} suppressHydrationWarning>
+      <body className="antialiased font-sans" suppressHydrationWarning>
         {children}
       </body>
     </html>

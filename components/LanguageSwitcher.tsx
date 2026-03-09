@@ -2,11 +2,9 @@
 
 import React from "react";
 import { useStore } from "@/store/useStore";
-import { useI18n } from "@/hooks/useI18n";
 
 export function LanguageSwitcher() {
     const { language, setLanguage } = useStore();
-    const { dir } = useI18n();
 
     return (
         <div className="flex items-center gap-1 p-1 bg-white/60 backdrop-blur-md rounded-full border border-zinc-200 shadow-sm" dir="ltr">

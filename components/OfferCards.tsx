@@ -11,9 +11,15 @@ import { Check, Package } from "lucide-react";
 
 /**
  * 3 Premium Cards for Pack Selection
- * Homme, Femme, Mixte
+ * Mixte, Femme, Homme
  */
 const OFFERS: { id: PackType; titleKey: string; descKey: string; img: string }[] = [
+    {
+        id: "mixte",
+        titleKey: "pack_mixte",
+        descKey: "pack_mixte_desc",
+        img: "/catalogues/imag-landing/Mobile/Mobile-version-mixte.webp",
+    },
     {
         id: "femme",
         titleKey: "pack_femme",
@@ -25,12 +31,6 @@ const OFFERS: { id: PackType; titleKey: string; descKey: string; img: string }[]
         titleKey: "pack_homme",
         descKey: "pack_homme_desc",
         img: "/catalogues/imag-landing/Mobile/Mobile-version-homme.webp",
-    },
-    {
-        id: "mixte",
-        titleKey: "pack_mixte",
-        descKey: "pack_mixte_desc",
-        img: "/catalogues/imag-landing/Mobile/Mobile-version-mixte.webp",
     },
 ];
 
