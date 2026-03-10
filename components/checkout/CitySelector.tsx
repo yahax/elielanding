@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Search } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown, Search } from "lucide-react";
 import { useI18n } from "@/hooks/useI18n";
 import { MOROCCAN_CITIES } from "@/lib/moroccan-cities";
 
@@ -10,193 +10,327 @@ type CitySelectorProps = {
     onChange: (city: string) => void;
 };
 
-const CITY_TRANSLATIONS_AR: Record<string, string> = {
-    Casablanca: "الدار البيضاء",
-    Rabat: "الرباط",
-    "Salé": "سلا",
-    Marrakech: "مراكش",
-    Tanger: "طنجة",
-    "Fès": "فاس",
-    Agadir: "أكادير",
-    "Meknès": "مكناس",
-    Oujda: "وجدة",
-    "Tétouan": "تطوان",
-    "Kénitra": "القنيطرة",
-    "El Jadida": "الجديدة",
-    Safi: "آسفي",
-    Mohammedia: "المحمدية",
-    Nador: "الناظور",
-    Khouribga: "خريبكة",
-    Settat: "سطات",
-    "Béni Mellal": "بني ملال",
-    Larache: "العرائش",
-    "Ksar El Kebir": "القصر الكبير",
-    "Al Hoceïma": "الحسيمة",
-    Taza: "تازة",
-    Dakhla: "الداخلة",
-    "Laâyoune": "العيون",
-    Guelmim: "كلميم",
-    Taroudant: "تارودانت",
-    Essaouira: "الصويرة",
-    Errachidia: "الرشيدية",
-    Ouarzazate: "ورزازات",
-};
-
-const PRIORITY_CITIES: string[] = [
+const FEATURED_CITIES = [
     "Casablanca",
     "Rabat",
     "Marrakech",
-    "Tanger",
     "Fès",
+    "Tanger",
     "Agadir",
     "Meknès",
     "Oujda",
     "Kénitra",
     "Tétouan",
-    "Salé",
-    "Mohammedia",
+    "Safi",
     "El Jadida",
     "Béni Mellal",
     "Nador",
     "Taza",
-    "Safi",
     "Khouribga",
     "Settat",
     "Larache",
+    "Ksar El Kebir",
     "Ouarzazate",
-    "Al Hoceïma",
-    "Dakhla",
-    "Laâyoune",
     "Errachidia",
+    "Essaouira",
+    "Laâyoune",
+    "Dakhla",
+    "Mohammedia",
+    "Berrechid",
+    "Temara",
+    "Salé",
+    "Al Hoceima",
+    "Inezgane",
+    "Taroudant",
     "Guelmim",
 ];
 
+const CITY_TRANSLATIONS_AR: Record<string, string> = {
+    Agadir: "أكادير",
+    "Al Hoceima": "الحسيمة",
+    "Ait Melloul": "آيت ملول",
+    Asilah: "أصيلا",
+    Berkane: "بركان",
+    "Béni Mellal": "بني ملال",
+    Berrechid: "برشيد",
+    Biougra: "بيوكرى",
+    Bouskoura: "بوسكورة",
+    Bouznika: "بوزنيقة",
+    Casablanca: "الدار البيضاء",
+    Chefchaouen: "شفشاون",
+    Dakhla: "الداخلة",
+    "El Jadida": "الجديدة",
+    Errachidia: "الرشيدية",
+    Essaouira: "الصويرة",
+    "Fès": "فاس",
+    Fnideq: "الفنيدق",
+    Guelmim: "كلميم",
+    Ifrane: "إفران",
+    Inezgane: "إنزكان",
+    "Ksar El Kebir": "القصر الكبير",
+    "Kénitra": "القنيطرة",
+    Khouribga: "خريبكة",
+    Larache: "العرائش",
+    "Laâyoune": "العيون",
+    Marrakech: "مراكش",
+    Martil: "مرتيل",
+    "Meknès": "مكناس",
+    Mohammedia: "المحمدية",
+    Nador: "الناظور",
+    Ouarzazate: "ورزازات",
+    Oujda: "وجدة",
+    Rabat: "الرباط",
+    Safi: "آسفي",
+    "Salé": "سلا",
+    Settat: "سطات",
+    Tanger: "طنجة",
+    Taroudant: "تارودانت",
+    Temara: "تمارة",
+    "Tétouan": "تطوان",
+    Taza: "تازة",
+};
+
+const CITY_ALIASES: Record<string, string> = {
+    "Al Hoceima": "Al Hoceima Al Hoceima Al Hoceima الحسيمة",
+    "Fès": "Fes Fes Fès Fez فاس",
+    "Kénitra": "Kenitra Kenitra Kénitra القنيطرة",
+    "Laâyoune": "Laayoune Laâyoune العيون",
+    "Meknès": "Meknes Meknès مكناس",
+    "Salé": "Sale Salé سلا",
+    "Tétouan": "Tetouan Tétouan تطوان",
+};
+
+function normalizeSearchValue(value: string) {
+    return value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+}
+
 export function CitySelector({ value, onChange }: CitySelectorProps) {
-    const { dir, language, isRTL } = useI18n();
-    const [search, setSearch] = useState("");
+    const { dir, isRTL, language } = useI18n();
     const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const [highlightedIndex, setHighlightedIndex] = useState(0);
+
+    const listboxId = useId();
     const wrapperRef = useRef<HTMLDivElement | null>(null);
+    const inputRef = useRef<HTMLInputElement | null>(null);
+    const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
     const orderedCities = useMemo(() => {
-        const rest = MOROCCAN_CITIES.filter((city) => !PRIORITY_CITIES.includes(city));
-        return [...PRIORITY_CITIES, ...rest];
+        const merged = [...FEATURED_CITIES, ...MOROCCAN_CITIES];
+        const unique: string[] = [];
+        const seen = new Set<string>();
+
+        merged.forEach((city) => {
+            const normalized = normalizeSearchValue(city);
+            if (seen.has(normalized)) return;
+            seen.add(normalized);
+            unique.push(city);
+        });
+
+        return unique;
     }, []);
 
+    const filteredCities = useMemo(() => {
+        const normalizedQuery = normalizeSearchValue(search);
+        if (!normalizedQuery) return orderedCities;
+
+        return orderedCities.filter((city) => {
+            const arabicLabel = CITY_TRANSLATIONS_AR[city] || "";
+            const aliases = CITY_ALIASES[city] || "";
+            const searchable = [city, arabicLabel, aliases]
+                .map((entry) => normalizeSearchValue(entry))
+                .join(" ");
+
+            return searchable.includes(normalizedQuery);
+        });
+    }, [orderedCities, search]);
+
     useEffect(() => {
-        const handleOutsideClick = (event: MouseEvent) => {
-            if (!wrapperRef.current) return;
-            if (!wrapperRef.current.contains(event.target as Node)) {
+        if (!isOpen) return;
+        inputRef.current?.focus();
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const option = optionRefs.current[highlightedIndex];
+        option?.scrollIntoView({ block: "nearest" });
+    }, [highlightedIndex, isOpen]);
+
+    useEffect(() => {
+        const handlePointerDown = (event: MouseEvent) => {
+            if (!wrapperRef.current?.contains(event.target as Node)) {
                 setIsOpen(false);
                 setSearch("");
             }
         };
-        const onEscape = (event: KeyboardEvent) => {
+
+        const handleEscape = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
                 setIsOpen(false);
                 setSearch("");
             }
         };
 
-        document.addEventListener("mousedown", handleOutsideClick);
-        document.addEventListener("keydown", onEscape);
+        document.addEventListener("mousedown", handlePointerDown);
+        document.addEventListener("keydown", handleEscape);
+
         return () => {
-            document.removeEventListener("mousedown", handleOutsideClick);
-            document.removeEventListener("keydown", onEscape);
+            document.removeEventListener("mousedown", handlePointerDown);
+            document.removeEventListener("keydown", handleEscape);
         };
     }, []);
 
-    const filtered = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        if (!q) return orderedCities;
-
-        const startsWith: string[] = [];
-        const includes: string[] = [];
-        for (const city of orderedCities) {
-            const latin = city.toLowerCase();
-            const arabic = CITY_TRANSLATIONS_AR[city] || "";
-            if (latin.startsWith(q) || arabic.startsWith(search.trim())) {
-                startsWith.push(city);
-                continue;
-            }
-            if (latin.includes(q) || arabic.includes(search.trim())) {
-                includes.push(city);
-            }
-        }
-        return [...startsWith, ...includes];
-    }, [search, orderedCities]);
-
     const cityLabel = language === "ar" ? "المدينة" : "Ville";
-    const searchLabel = language === "ar" ? "ابحث عن مدينة" : "Rechercher une ville";
     const chooseLabel = language === "ar" ? "اختر المدينة" : "Choisir une ville";
-    const selectedLabel = value
-        ? (language === "ar" ? CITY_TRANSLATIONS_AR[value] || value : value)
-        : chooseLabel;
+    const searchPlaceholder = language === "ar" ? "ابحث عن مدينة" : "Rechercher une ville";
+    const emptyResultsLabel = language === "ar" ? "لا توجد نتيجة" : "Aucun resultat";
+
+    const formatCityLabel = (city: string) => (language === "ar" ? CITY_TRANSLATIONS_AR[city] || city : city);
+    const selectedLabel = value ? formatCityLabel(value) : chooseLabel;
+
+    const openDropdown = () => {
+        const selectedIndex = orderedCities.findIndex((city) => city === value);
+        setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
+        setIsOpen(true);
+    };
+
+    const selectCity = (city: string) => {
+        onChange(city);
+        setIsOpen(false);
+        setSearch("");
+    };
 
     return (
-        <div ref={wrapperRef} className="rounded-[16px] border border-[#e5d6bf] bg-[#fffdf9] p-3" dir={dir}>
-            <p className={`mb-2 text-[12px] font-medium text-zinc-600 ${isRTL ? "text-right" : "text-left"}`}>{cityLabel}</p>
+        <div ref={wrapperRef} className="relative" dir={dir}>
+            <p className={`mb-1.5 text-[12px] font-semibold text-[#6F6257] ${isRTL ? "text-right" : "text-left"}`}>
+                {cityLabel}
+            </p>
 
             <button
                 type="button"
-                onClick={() => setIsOpen((prev) => !prev)}
-                className={`flex h-11 w-full items-center justify-between rounded-[12px] border border-[#e5d6bf] bg-white px-3 text-[14px] transition hover:border-[#b69257] ${isRTL ? "flex-row-reverse text-right" : "text-left"}`}
+                onClick={() => {
+                    if (isOpen) {
+                        setIsOpen(false);
+                        setSearch("");
+                        return;
+                    }
+
+                    openDropdown();
+                }}
+                onKeyDown={(event) => {
+                    if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openDropdown();
+                    }
+                }}
+                aria-expanded={isOpen}
+                aria-haspopup="listbox"
+                aria-controls={listboxId}
+                className={`flex h-12 w-full items-center justify-between rounded-[16px] border border-[#E6D6BE] bg-white px-4 text-[14px] text-[#201A16] shadow-[0_8px_20px_rgba(32,26,22,0.03)] transition hover:border-[#C9A86A] ${isRTL ? "flex-row-reverse text-right" : "text-left"}`}
             >
-                <span className={value ? "text-zinc-900" : "text-zinc-500"}>{selectedLabel}</span>
-                <ChevronDown className={`h-4 w-4 text-zinc-500 transition ${isOpen ? "rotate-180" : ""}`} />
+                <span className={value ? "text-[#201A16]" : "text-[#8A7868]"}>{selectedLabel}</span>
+                <ChevronDown className={`h-4 w-4 text-[#8A7868] transition ${isOpen ? "rotate-180" : ""}`} />
             </button>
 
-            {isOpen && (
-                <div className="mt-2 rounded-[12px] border border-[#efe5d6] bg-white p-2">
-                    <div className="relative">
-                        <Search className={`pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 ${isRTL ? "right-3" : "left-3"}`} />
-                        <input
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                            placeholder={searchLabel}
-                            autoFocus
-                            className={`h-10 w-full rounded-[10px] border border-[#e5d6bf] bg-white px-10 text-[13px] text-zinc-900 outline-none transition focus:border-[#b69257] ${isRTL ? "text-right" : "text-left"}`}
-                        />
-                    </div>
+            {isOpen ? (
+                <div className="absolute inset-x-0 top-full z-40 mt-2 overflow-hidden rounded-[20px] border border-[#E6D6BE] bg-white shadow-[0_20px_44px_rgba(32,26,22,0.12)]">
+                    <div className="border-b border-[#F1E5D4] p-3">
+                        <div className="relative">
+                            <Search className={`pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 text-[#8A7868] ${isRTL ? "right-3" : "left-3"}`} />
+                            <input
+                                ref={inputRef}
+                                value={search}
+                                onChange={(event) => {
+                                    setSearch(event.target.value);
+                                    setHighlightedIndex(0);
+                                }}
+                                onKeyDown={(event) => {
+                                    if (!filteredCities.length) {
+                                        if (event.key === "Escape") {
+                                            setIsOpen(false);
+                                            setSearch("");
+                                        }
+                                        return;
+                                    }
 
-                    <div className="mt-2 max-h-48 overflow-y-auto rounded-[10px] border border-[#efe5d6] bg-white">
-                        {filtered.map((city) => {
-                            const selected = city === value;
-                            return (
-                                <button
-                                    key={city}
-                                    type="button"
-                                    onClick={() => {
-                                        onChange(city);
+                                    if (event.key === "ArrowDown") {
+                                        event.preventDefault();
+                                        setHighlightedIndex((current) => Math.min(current + 1, filteredCities.length - 1));
+                                    }
+
+                                    if (event.key === "ArrowUp") {
+                                        event.preventDefault();
+                                        setHighlightedIndex((current) => Math.max(current - 1, 0));
+                                    }
+
+                                    if (event.key === "Enter") {
+                                        event.preventDefault();
+                                        const nextCity = filteredCities[highlightedIndex];
+                                        if (nextCity) selectCity(nextCity);
+                                    }
+
+                                    if (event.key === "Escape") {
+                                        event.preventDefault();
                                         setIsOpen(false);
                                         setSearch("");
-                                    }}
-                                    className={`flex w-full items-center justify-between px-3 py-2.5 text-[13px] transition ${selected
-                                        ? "bg-[#2f8f5b] text-white"
-                                        : "text-zinc-700 hover:bg-[#f8f1e6]"
-                                        } ${isRTL ? "flex-row-reverse text-right" : "text-left"}`}
-                                >
-                                    <span>{language === "ar" ? CITY_TRANSLATIONS_AR[city] || city : city}</span>
-                                    {selected && <span>✓</span>}
-                                </button>
-                            );
-                        })}
+                                    }
+                                }}
+                                role="combobox"
+                                aria-expanded={isOpen}
+                                aria-controls={listboxId}
+                                aria-activedescendant={filteredCities[highlightedIndex] ? `${listboxId}-${highlightedIndex}` : undefined}
+                                placeholder={searchPlaceholder}
+                                className={`h-11 w-full rounded-[14px] border border-[#E6D6BE] bg-[#FFFDF9] px-10 text-[13px] text-[#201A16] outline-none transition focus:border-[#C9A86A] ${isRTL ? "text-right" : "text-left"}`}
+                            />
+                        </div>
+                    </div>
 
-                        {!filtered.length && (
-                            <p className={`px-3 py-4 text-[12px] text-zinc-500 ${isRTL ? "text-right" : "text-left"}`}>
-                                {language === "ar" ? "لا توجد نتيجة" : "Aucun resultat"}
+                    <div id={listboxId} role="listbox" className="max-h-64 overflow-y-auto p-2">
+                        {filteredCities.length ? (
+                            filteredCities.map((city, index) => {
+                                const isSelected = city === value;
+                                const isHighlighted = index === highlightedIndex;
+
+                                return (
+                                    <button
+                                        key={city}
+                                        ref={(node) => {
+                                            optionRefs.current[index] = node;
+                                        }}
+                                        id={`${listboxId}-${index}`}
+                                        type="button"
+                                        role="option"
+                                        aria-selected={isSelected}
+                                        onMouseEnter={() => setHighlightedIndex(index)}
+                                        onClick={() => selectCity(city)}
+                                        className={`flex w-full items-center justify-between rounded-[14px] px-3 py-3 text-[13px] transition ${
+                                            isHighlighted
+                                                ? "bg-[#F7F1E8]"
+                                                : "bg-white"
+                                        } ${
+                                            isSelected
+                                                ? "text-[#2F9E5B]"
+                                                : "text-[#201A16]"
+                                        } ${isRTL ? "flex-row-reverse text-right" : "text-left"}`}
+                                    >
+                                        <span>{formatCityLabel(city)}</span>
+                                        {isSelected ? <Check className="h-4 w-4" /> : null}
+                                    </button>
+                                );
+                            })
+                        ) : (
+                            <p className={`px-3 py-5 text-[13px] text-[#8A7868] ${isRTL ? "text-right" : "text-left"}`}>
+                                {emptyResultsLabel}
                             </p>
                         )}
                     </div>
                 </div>
-            )}
-
-            {value && (
-                <p className={`mt-2 text-[11px] text-zinc-500 ${isRTL ? "text-right" : "text-left"}`}>
-                    {language === "ar"
-                        ? `المدينة المختارة: ${selectedLabel}`
-                        : `Ville selectionnee: ${selectedLabel}`}
-                </p>
-            )}
+            ) : null}
         </div>
     );
 }

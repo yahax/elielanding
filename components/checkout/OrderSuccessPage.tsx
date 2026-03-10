@@ -25,8 +25,8 @@ export function OrderSuccessPage({ orderId }: OrderSuccessPageProps) {
         : "Retour a la page d'accueil";
 
     const another = language === "ar"
-        ? "طلب باك آخر"
-        : "Commander un autre pack";
+        ? "العودة إلى Pack Mixte"
+        : "Revenir au Pack Mixte";
 
     return (
         <main className="min-h-screen bg-[#f8f2e9] pb-14 text-zinc-900">
@@ -47,7 +47,7 @@ export function OrderSuccessPage({ orderId }: OrderSuccessPageProps) {
                         <Link href="/" className="cta-primary mt-6 inline-flex h-[56px] items-center justify-center px-7 text-[15px] font-bold">
                             {back}
                         </Link>
-                        <Link href="/pack/mixte" className="mt-3 inline-flex h-[50px] items-center justify-center rounded-[14px] border border-[#d7c19c] bg-[#f7f0e4] px-6 text-[14px] font-semibold text-zinc-800">
+                        <Link href="/" className="mt-3 inline-flex h-[50px] items-center justify-center rounded-[14px] border border-[#d7c19c] bg-[#f7f0e4] px-6 text-[14px] font-semibold text-zinc-800">
                             {another}
                         </Link>
                     </div>

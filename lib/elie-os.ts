@@ -23,7 +23,7 @@ export interface ElieOSOrderPayload {
         fullName: string;
         phone: string;
         city: string;
-        address: string;
+        address?: string;
     };
     meta: {
         userAgent: string;

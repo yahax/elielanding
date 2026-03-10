@@ -16,7 +16,7 @@ const orderPayloadSchema = z.object({
         fullName: z.string().min(1),
         phone: z.string().min(1),
         city: z.string().min(1),
-        address: z.string().min(1),
+        address: z.string().optional(),
     }),
     meta: z.record(z.any()).optional(),
 });
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
             p_customer_name: payload.customer.fullName,
             p_phone: payload.customer.phone,
             p_city: payload.customer.city,
-            p_address: payload.customer.address,
+            p_address: payload.customer.address?.trim() || payload.customer.city,
             p_pack_type: payload.offerType,
             p_total_price: payload.pricing.total,
             p_source: "landing_page", // Force landing_page for ELIE OS visibility

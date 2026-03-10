@@ -15,8 +15,8 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "ELIE Parfum | 5+1 Offert",
-  description: "Experience premium ELIE Parfum: choisissez 5 parfums et recevez le 6eme offert avec livraison gratuite.",
+  title: "ELIE Parfum | Pack Mixte",
+  description: "Pack Mixte ELIE Parfum: 5 parfums 30ml + 1 cadeau, livraison gratuite et paiement a la livraison au Maroc.",
   icons: {
     icon: [
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },

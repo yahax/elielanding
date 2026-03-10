@@ -13,7 +13,6 @@ type CheckoutCustomer = {
     fullName: string;
     phone: string;
     city: string;
-    address: string;
 };
 
 function createEmptyCheckoutSlots(): (string | null)[] {
@@ -77,7 +76,6 @@ export const useStore = create<StoreState>()(
                 fullName: "",
                 phone: "",
                 city: "",
-                address: "",
             },
 
             setCheckoutSelectionSlots: (slots) => {
@@ -231,7 +229,6 @@ export const useStore = create<StoreState>()(
                         fullName: "",
                         phone: "",
                         city: "",
-                        address: "",
                     },
                 });
             },
