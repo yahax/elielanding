@@ -8,6 +8,26 @@
 DROP FUNCTION IF EXISTS create_order_secure(TEXT, TEXT, TEXT, TEXT, TEXT, INT, TEXT, TEXT[]);
 DROP FUNCTION IF EXISTS create_order_secure(TEXT, TEXT, TEXT, TEXT, TEXT, INT, TEXT, TEXT[], TEXT, JSONB);
 
+-- Database-level safeguards: refuse incomplete ELIE 5+1 orders.
+DO $$
+BEGIN
+    IF to_regclass('public.orders') IS NOT NULL THEN
+        ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_selected_perfumes_len_chk;
+        ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_gift_perfume_nonempty_chk;
+        ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_selected_gift_unique_chk;
+
+        ALTER TABLE orders
+            ADD CONSTRAINT orders_selected_perfumes_len_chk
+                CHECK (COALESCE(array_length(selected_perfumes, 1), 0) = 5) NOT VALID,
+            ADD CONSTRAINT orders_gift_perfume_nonempty_chk
+                CHECK (gift_perfume IS NOT NULL AND btrim(gift_perfume) <> '') NOT VALID;
+
+        CREATE INDEX IF NOT EXISTS idx_orders_idempotency_key
+            ON orders ((meta->>'idempotency_key'))
+            WHERE (meta->>'idempotency_key') IS NOT NULL AND btrim(meta->>'idempotency_key') <> '';
+    END IF;
+END $$;
+
 CREATE OR REPLACE FUNCTION create_order_secure(
     p_customer_name TEXT,
     p_phone TEXT,
@@ -24,12 +44,61 @@ DECLARE
     v_order_id UUID;
     v_perfume_name TEXT;
     v_perfume_id UUID;
+    v_existing_order_id UUID;
+    v_idempotency_key TEXT;
     v_has_perfume_inventory BOOLEAN := to_regclass('public.inventory') IS NOT NULL AND to_regclass('public.perfumes') IS NOT NULL;
     v_has_products BOOLEAN := to_regclass('public.products') IS NOT NULL;
 BEGIN
     -- 1. Validate Input
+    IF p_customer_name IS NULL OR btrim(p_customer_name) = '' THEN
+        RAISE EXCEPTION 'Le nom client est obligatoire.';
+    END IF;
+
+    IF p_phone IS NULL OR btrim(p_phone) = '' THEN
+        RAISE EXCEPTION 'Le téléphone client est obligatoire.';
+    END IF;
+
+    IF p_city IS NULL OR btrim(p_city) = '' THEN
+        RAISE EXCEPTION 'La ville client est obligatoire.';
+    END IF;
+
+    IF p_pack_type IS NULL OR btrim(p_pack_type) NOT IN ('homme', 'femme', 'mixte') THEN
+        RAISE EXCEPTION 'Pack invalide.';
+    END IF;
+
+    IF p_source IS NULL OR btrim(p_source) = '' THEN
+        RAISE EXCEPTION 'Source obligatoire.';
+    END IF;
+
+    IF p_total_price <> 199 THEN
+        RAISE EXCEPTION 'Prix invalide pour l''offre ELIE.';
+    END IF;
+
     IF COALESCE(array_length(p_perfumes, 1), 0) <> 6 THEN
         RAISE EXCEPTION 'Une commande ELIE nécessite exactement 6 parfums.';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM unnest(p_perfumes) AS perfume_name
+        WHERE perfume_name IS NULL OR btrim(perfume_name) = ''
+    ) THEN
+        RAISE EXCEPTION 'Les slots parfum sont incomplets.';
+    END IF;
+
+    -- Idempotency: return existing order for repeated payload key.
+    v_idempotency_key := NULLIF(btrim(COALESCE(p_meta->>'idempotency_key', '')), '');
+    IF v_idempotency_key IS NOT NULL THEN
+        SELECT id
+        INTO v_existing_order_id
+        FROM orders
+        WHERE meta->>'idempotency_key' = v_idempotency_key
+        ORDER BY created_at DESC
+        LIMIT 1;
+
+        IF v_existing_order_id IS NOT NULL THEN
+            RETURN v_existing_order_id;
+        END IF;
     END IF;
 
     -- 2. Create the Order
@@ -53,20 +122,20 @@ BEGIN
         updated_at
     )
     VALUES (
-        p_customer_name, 
-        p_phone, 
-        p_city, 
-        p_address, 
-        p_pack_type, 
+        btrim(p_customer_name), 
+        btrim(p_phone), 
+        btrim(p_city), 
+        COALESCE(NULLIF(btrim(p_address), ''), btrim(p_city)), 
+        btrim(p_pack_type), 
         p_perfumes[1:5],  -- Indices 1-5 (first 5)
-        p_perfumes[6],    -- Index 6 (last)
+        btrim(p_perfumes[6]),    -- Index 6 (last)
         p_total_price, 
         p_total_price,
-        COALESCE(p_offer_mode, 'ramadan'),
+        COALESCE(NULLIF(btrim(p_offer_mode), ''), 'ramadan'),
         'free',
-        p_source, 
+        btrim(p_source), 
         'new', 
-        p_meta,
+        COALESCE(p_meta, '{}'::jsonb),
         now(), 
         now()
     )

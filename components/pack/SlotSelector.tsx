@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { FlaskConical, Lock } from "lucide-react";
 import type { Perfume } from "@/data/perfumes";
 
@@ -24,7 +25,7 @@ type SlotSelectorProps = {
 
 const GIFT_SLOT_INDEX = 5;
 
-export function SlotSelector({
+export const SlotSelector = memo(function SlotSelector({
     activeSlot,
     copy,
     dir,
@@ -113,4 +114,6 @@ export function SlotSelector({
             })}
         </div>
     );
-}
+});
+
+SlotSelector.displayName = "SlotSelector";

@@ -40,12 +40,5 @@ export function normalizeOrderPerfumes(order: Order | null): string[] {
         .map(p => p?.trim())
         .filter(p => p && p.toLowerCase() !== 'test' && p.toLowerCase() !== 'none');
 
-    // 4. Trace the logic for production debugging
-    console.log(`[OrderUtils] Normalizing order ${order.id}:`, {
-        rawSelected: order.selected_perfumes,
-        rawGift: order.gift_perfume,
-        result: cleanPerfumes
-    });
-
     return cleanPerfumes;
 }

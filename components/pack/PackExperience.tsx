@@ -1,30 +1,67 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronDown, Lock, Search, X } from "lucide-react";
+import { Check, ChevronDown, Lock, Search } from "lucide-react";
 import { CitySelector } from "@/components/checkout/CitySelector";
 import { SlotSelector } from "@/components/pack/SlotSelector";
 import { FloatingWhatsAppButton } from "@/components/site/FloatingWhatsAppButton";
 import { PERFUMES, type Perfume } from "@/data/perfumes";
 import { useI18n } from "@/hooks/useI18n";
-import { submitOrderToElieOS } from "@/lib/elie-os";
+import {
+    GIFT_SLOT_INDEX,
+    getCheckoutSelectionProgress,
+    MAIN_SLOT_COUNT,
+    TOTAL_SLOT_COUNT,
+} from "@/lib/checkout-security";
+import { submitOrderToElieOS, type ElieOSOrderPayload } from "@/lib/elie-os";
 import { PRICE_MAD } from "@/lib/offer-config";
 import { PACKS } from "@/lib/packs";
 import { captureTracking, getTracking } from "@/lib/tracking";
 
-const TOTAL_SLOTS = 6;
-const GIFT_SLOT_INDEX = 5;
 const PHONE_REGEX = /^0[67]\d{8}$/;
 
-type FieldErrorKey = "name" | "phone" | "city" | "address";
+type FieldErrorKey = "name" | "phone" | "city";
 type CatalogFilter = "all" | "femme" | "homme";
 type CheckoutCustomer = {
     name: string;
     phone: string;
     city: string;
+};
+type CheckoutCopy = {
+    active: string;
+    activeHint: string;
+    cardTitle: string;
+    cta: string;
+    ctaLocked: string;
+    empty: string;
+    errCity: string;
+    errName: string;
+    errPhone: string;
+    errSelection: string;
+    filterAll: string;
+    filterFemme: string;
+    filterHomme: string;
+    footer: string;
+    gift: string;
+    giftLocked: string;
+    heading: string;
+    helper: string;
+    loading: string;
+    pack: string;
+    searchPlaceholder: string;
+    slot: string;
+    slotsTitle: string;
+    summaryPrice: string;
+    summaryDelivery: string;
+    summaryPayment: string;
+    summaryGuide: string;
+    progressSelectMain: string;
+    progressSelectGift: string;
+    progressReady: string;
+    viewCatalog: string;
 };
 
 const EMPTY_CUSTOMER: CheckoutCustomer = {
@@ -45,7 +82,7 @@ const FR_TAGS: Record<string, string> = {
 };
 
 function createEmptySlots() {
-    return Array<string | null>(TOTAL_SLOTS).fill(null);
+    return Array<string | null>(TOTAL_SLOT_COUNT).fill(null);
 }
 
 function normalizeSearchValue(value: string) {
@@ -115,8 +152,6 @@ export function PackExperience() {
     const [slots, setSlots] = useState<(string | null)[]>(() => createEmptySlots());
     const [activeSlot, setActiveSlot] = useState(0);
     const [catalogFilter, setCatalogFilter] = useState<CatalogFilter>("all");
-    const [modalFilter, setModalFilter] = useState<CatalogFilter>("all");
-    const [isCatalogOpen, setIsCatalogOpen] = useState(false);
     const [isFormVisible, setIsFormVisible] = useState(false);
     const [query, setQuery] = useState("");
     const [customer, setCustomer] = useState<CheckoutCustomer>(EMPTY_CUSTOMER);
@@ -129,6 +164,8 @@ export function PackExperience() {
     const catalogRef = useRef<HTMLDivElement | null>(null);
     const checkoutRef = useRef<HTMLFormElement | null>(null);
     const mobileFormRef = useRef<HTMLDivElement | null>(null);
+    const submitLockRef = useRef(false);
+    const idempotencyKeyRef = useRef<string | null>(null);
 
     const perfumeById = useMemo(
         () => new Map(PERFUMES.map((perfume) => [perfume.id, perfume])),
@@ -141,7 +178,7 @@ export function PackExperience() {
     useEffect(() => {
         setHasMounted(true);
         captureTracking();
-    }, [hasMounted]);
+    }, []);
 
     useEffect(() => {
         if (!mobileFormRef.current) return;
@@ -157,15 +194,24 @@ export function PackExperience() {
         return () => observer.disconnect();
     }, [hasMounted]);
 
+    useEffect(() => {
+        idempotencyKeyRef.current = null;
+    }, [slots, customer.name, customer.phone, customer.city]);
+
     const selectedPerfumes = useMemo(
         () => slots.map((perfumeId) => (perfumeId ? perfumeById.get(perfumeId) || null : null)),
         [perfumeById, slots]
     );
 
-    const selectedCount = selectedPerfumes.filter(Boolean).length;
-    const firstFiveComplete = slots.slice(0, GIFT_SLOT_INDEX).every(Boolean);
-    const isSelectionComplete = selectedCount === TOTAL_SLOTS;
-    const isCoffretFull = selectedCount === TOTAL_SLOTS;
+    const selectionProgress = useMemo(() => getCheckoutSelectionProgress(slots), [slots]);
+    const firstFiveComplete = selectionProgress.isMainComplete;
+    const isSelectionComplete = selectionProgress.isSelectionComplete;
+    const isCoffretFull = isSelectionComplete;
+    const hasRequiredName = customer.name.trim().length > 0;
+    const hasRequiredPhone = customer.phone.trim().length > 0;
+    const hasRequiredCity = customer.city.trim().length > 0;
+    const hasRequiredCustomerFields = hasRequiredName && hasRequiredPhone && hasRequiredCity;
+    const canSubmitOrder = isSelectionComplete && hasRequiredCustomerFields && !submitting;
 
     const filteredPerfumes = useMemo(() => {
         const normalizedQuery = normalizeSearchValue(query);
@@ -188,108 +234,94 @@ export function PackExperience() {
         });
     }, [catalogFilter, language, query]);
 
-    const modalPerfumes = useMemo(() => {
-        return PERFUMES.filter((perfume) => {
-            if (modalFilter !== "all" && perfume.gender !== modalFilter) return false;
-            return true;
-        });
-    }, [modalFilter]);
-
-    const copy = isArabic
+    const copy: CheckoutCopy = isArabic
         ? {
             active: "نشطة",
             activeHint: "أنت تختار الآن للخانة",
             cardTitle: "إتمام الطلب",
-            cta: "اشترِ الآن",
+            cta: "تأكيد الطلب",
+            ctaLocked: "أكمل اختيارك أولاً",
             empty: "اختر عطراً",
             errCity: "يرجى اختيار المدينة.",
             errName: "يرجى إدخال الاسم.",
             errPhone: "أدخل رقم هاتف مغربي صحيح.",
-            errSelection: "أكمل اختيار 6 عطور أولاً.",
-            fieldName: "الاسم",
-            fieldPhone: "رقم الهاتف",
+            errSelection: "اختر 5 عطور ثم عطر الهدية.",
             filterAll: "الكل",
             filterFemme: "نسائي",
             filterHomme: "رجالي",
             footer: "© 2026 ELIE Parfum",
             gift: "هدية",
             giftLocked: "متاحة بعد إكمال 5 خانات",
-            heroPrimary: "ابدأ الاختيار",
-            heroSecondary: "شاهد الكاتالوج",
             heading: "اختر 5 عطور من الكاتالوج واحصل على العطر السادس هدية",
             helper: "توصيل مجاني والدفع عند الاستلام في جميع مدن المغرب",
             loading: "جارٍ إرسال الطلب...",
             pack: "Pack Mixte",
             searchPlaceholder: "ابحث في الكاتالوج",
-            selectForSlot: "اختر لهذه الخانة",
-            selectGift: "اختر الهدية",
             slot: "خانة",
-            slotsSubtitle: "اضغط على الخانة ثم اختر عطرك من الأسفل",
             slotsTitle: "صندوق ELIE الخاص بك",
-            statusEmpty: "فارغة",
-            statusFilled: "مملوءة",
-            unlockHint: "أكمل 6 خانات لتفعيل الطلب",
+            summaryPrice: "السعر: DH 199",
+            summaryDelivery: "التوصيل مجاني",
+            summaryPayment: "الدفع عند الاستلام",
+            summaryGuide: "اختر 5 عطور ثم عطر الهدية",
+            progressSelectMain: "اختر 5 عطور من اختيارك",
+            progressSelectGift: "ممتاز — اختر الآن عطر الهدية",
+            progressReady: "جاهز لتأكيد الطلب",
             viewCatalog: "الكاتالوج",
-            close: "إغلاق",
         }
         : {
             active: "Actif",
             activeHint: "Vous choisissez maintenant pour",
             cardTitle: "Finaliser la commande",
-            cta: "Acheter maintenant",
+            cta: "Passer commande",
+            ctaLocked: "Completez votre selection d'abord",
             empty: "Choisir un parfum",
             errCity: "Veuillez choisir une ville.",
             errName: "Veuillez saisir votre nom.",
             errPhone: "Entrez un numero marocain valide.",
-            errSelection: "Completez d'abord vos 6 parfums.",
-            fieldName: "Nom",
-            fieldPhone: "Telephone",
+            errSelection: "Choisissez 5 parfums puis le cadeau.",
             filterAll: "Tous",
             filterFemme: "Femme",
             filterHomme: "Homme",
             footer: "© 2026 ELIE Parfum",
             gift: "Cadeau",
             giftLocked: "Disponible apres 5 slots",
-            heroPrimary: "Commencer",
-            heroSecondary: "Voir le catalogue",
             heading: "Choisissez 5 parfums du catalogue et recevez le 6eme en cadeau",
             helper: "Livraison gratuite et paiement a la livraison dans tout le Maroc",
             loading: "Envoi en cours...",
             pack: "Pack Mixte",
             searchPlaceholder: "Rechercher dans le catalogue",
-            selectForSlot: "Choisir pour cette case",
-            selectGift: "Choisir le cadeau",
             slot: "Case",
-            slotsSubtitle: "Cliquez sur une case puis choisissez votre parfum ci-dessous",
             slotsTitle: "Votre Coffret ELIE",
-            statusEmpty: "Vide",
-            statusFilled: "Remplie",
-            unlockHint: "Completez 6 cases pour activer la commande",
+            summaryPrice: "Prix: DH 199",
+            summaryDelivery: "Livraison gratuite",
+            summaryPayment: "Paiement a la livraison",
+            summaryGuide: "Choisissez 5 parfums puis le parfum cadeau",
+            progressSelectMain: "Choisissez 5 parfums de votre choix",
+            progressSelectGift: "Parfait - choisissez maintenant le parfum cadeau",
+            progressReady: "Pret a confirmer la commande",
             viewCatalog: "Catalogue",
-            close: "Fermer",
         };
 
     const activeSlotLabel = activeSlot === GIFT_SLOT_INDEX ? copy.gift : `${copy.slot} ${activeSlot + 1}`;
-    const catalogueCtaLabel = activeSlot === GIFT_SLOT_INDEX ? copy.selectGift : copy.selectForSlot;
 
-    const clearError = (field: FieldErrorKey) => {
+    const clearError = useCallback((field: FieldErrorKey) => {
         setErrors((current) => {
             if (!current[field]) return current;
             const next = { ...current };
             delete next[field];
             return next;
         });
-    };
+    }, []);
 
-    const updateCustomerField = (field: keyof CheckoutCustomer, value: string) => {
+    const updateCustomerField = useCallback((field: keyof CheckoutCustomer, value: string) => {
         setCustomer((current) => ({ ...current, [field]: value }));
 
         if (field === "name" || field === "phone" || field === "city") {
             clearError(field as FieldErrorKey);
         }
-    };
+    }, [clearError]);
 
-    const handleSlotClick = (index: number) => {
+    const handleSlotClick = useCallback((index: number) => {
         if (index === GIFT_SLOT_INDEX && !firstFiveComplete && !slots[index]) {
             setSelectionError(copy.giftLocked);
             return;
@@ -297,10 +329,10 @@ export function PackExperience() {
 
         setActiveSlot(index);
         setSelectionError("");
-        setIsCatalogOpen(true); // Method B: Opens modal/bottom-sheet
-    };
+        scrollToSection(catalogRef.current);
+    }, [copy.giftLocked, firstFiveComplete, slots]);
 
-    const handlePerfumeSelect = (perfumeId: string) => {
+    const handlePerfumeSelect = useCallback((perfumeId: string) => {
         if (activeSlot === GIFT_SLOT_INDEX && !firstFiveComplete) {
             setSelectionError(copy.giftLocked);
             return;
@@ -311,30 +343,43 @@ export function PackExperience() {
 
         setSlots(nextSlots);
         setSelectionError("");
-        setIsCatalogOpen(false); // Closes modal if Method B was used
 
         const nextEmptySlot = findNextEmptySlotIndex(nextSlots, activeSlot);
         if (nextEmptySlot !== -1) {
             setActiveSlot(nextEmptySlot);
         }
-    };
+    }, [activeSlot, copy.giftLocked, firstFiveComplete, slots]);
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        setSubmitError("");
+        if (submitLockRef.current || submitting) {
+            return;
+        }
 
-        if (!isSelectionComplete) {
+        setSubmitError("");
+        setSelectionError("");
+
+        const normalizedPhone = normalizeMoroccanPhone(customer.phone);
+        const trimmedName = customer.name.trim();
+        const trimmedPhone = normalizedPhone.trim();
+        const trimmedCity = customer.city.trim();
+        const submitSelection = getCheckoutSelectionProgress(slots);
+
+        if (!submitSelection.isSelectionComplete) {
             setSelectionError(copy.errSelection);
             scrollToSection(selectionRef.current);
             return;
         }
 
-        const normalizedPhone = normalizeMoroccanPhone(customer.phone);
         const nextErrors: Partial<Record<FieldErrorKey, string>> = {};
 
-        if (!customer.name.trim()) nextErrors.name = copy.errName;
-        if (!PHONE_REGEX.test(normalizedPhone)) nextErrors.phone = copy.errPhone;
-        if (!customer.city) nextErrors.city = copy.errCity;
+        if (!trimmedName) nextErrors.name = copy.errName;
+        if (!customer.phone.trim()) {
+            nextErrors.phone = copy.errPhone;
+        } else if (!PHONE_REGEX.test(trimmedPhone)) {
+            nextErrors.phone = copy.errPhone;
+        }
+        if (!trimmedCity) nextErrors.city = copy.errCity;
 
         if (Object.keys(nextErrors).length > 0) {
             setErrors(nextErrors);
@@ -342,25 +387,60 @@ export function PackExperience() {
             return;
         }
 
-        const readyPerfumes = selectedPerfumes.filter((perfume): perfume is Perfume => Boolean(perfume));
-        if (readyPerfumes.length !== TOTAL_SLOTS) {
+        const slotPerfumeNames = submitSelection.normalizedSlots.map((perfumeId) => {
+            if (!perfumeId) return null;
+            const perfume = perfumeById.get(perfumeId);
+            return perfume?.name?.trim() || null;
+        });
+
+        if (slotPerfumeNames.some((name) => !name)) {
             setSelectionError(copy.errSelection);
             scrollToSection(selectionRef.current);
             return;
         }
 
+        const [slot1, slot2, slot3, slot4, slot5, giftSlot] = slotPerfumeNames as string[];
+        const selectedMainPerfumeNames = [slot1, slot2, slot3, slot4, slot5];
+        const payloadTotalPerfumes = selectedMainPerfumeNames.length + 1;
+
+        if (
+            selectedMainPerfumeNames.length !== MAIN_SLOT_COUNT ||
+            !giftSlot ||
+            payloadTotalPerfumes !== TOTAL_SLOT_COUNT
+        ) {
+            setSelectionError(copy.errSelection);
+            scrollToSection(selectionRef.current);
+            return;
+        }
+
+        if (!idempotencyKeyRef.current) {
+            idempotencyKeyRef.current = crypto.randomUUID();
+        }
+
+        const idempotencyKey = idempotencyKeyRef.current;
         const tracking = getTracking();
+        submitLockRef.current = true;
         setSubmitting(true);
 
         try {
-            const result = await submitOrderToElieOS({
+            const payload: ElieOSOrderPayload = {
                 source: "pack_mixte_direct_conversion",
-                locale: language,
+                locale: language as "ar" | "fr",
                 offerType: "mixte",
                 customerIntent: "للزوجين",
-                items: readyPerfumes.map((perfume, index) => ({
+                slots: {
+                    slot1,
+                    slot2,
+                    slot3,
+                    slot4,
+                    slot5,
+                    giftSlot,
+                },
+                selected_perfumes: selectedMainPerfumeNames,
+                gift_perfume: giftSlot,
+                items: [...selectedMainPerfumeNames, giftSlot].map((perfumeName, index) => ({
                     slot: index + 1,
-                    name: perfume.name,
+                    name: perfumeName,
                     free: index === GIFT_SLOT_INDEX,
                 })),
                 pricing: {
@@ -370,9 +450,9 @@ export function PackExperience() {
                     paymentMethod: "cod",
                 },
                 customer: {
-                    fullName: customer.name.trim(),
-                    phone: normalizedPhone,
-                    city: customer.city,
+                    fullName: trimmedName,
+                    phone: trimmedPhone,
+                    city: trimmedCity,
                     address: "Order via Simplified 3-Field Form",
                 },
                 meta: {
@@ -383,8 +463,16 @@ export function PackExperience() {
                     utm_adset: tracking.utm_adset,
                     utm_ad: tracking.utm_ad,
                     referrer: tracking.referrer,
+                    idempotency_key: idempotencyKey,
+                    checkout_security: {
+                        selectedMainCount: selectedMainPerfumeNames.length,
+                        giftSelected: Boolean(giftSlot),
+                        totalPerfumes: payloadTotalPerfumes,
+                    },
                 },
-            });
+            };
+
+            const result = await submitOrderToElieOS(payload);
 
             if (!result.success || !result.orderId) {
                 setSubmitError(result.error || "Erreur");
@@ -396,9 +484,9 @@ export function PackExperience() {
             setCustomer(EMPTY_CUSTOMER);
             setErrors({});
             setSelectionError("");
+            idempotencyKeyRef.current = null;
             router.push(`/order-success?orderId=${encodeURIComponent(result.orderId)}`);
-        } catch (error) {
-            console.error(error);
+        } catch {
             setSubmitError(
                 isArabic
                     ? "تعذر إرسال الطلب حالياً. حاول مرة أخرى."
@@ -406,8 +494,82 @@ export function PackExperience() {
             );
         } finally {
             setSubmitting(false);
+            submitLockRef.current = false;
         }
     };
+
+    const slotSelectorCopy = useMemo(
+        () => ({
+            active: copy.active,
+            activeHint: copy.activeHint,
+            empty: copy.empty,
+            gift: copy.gift,
+            locked: copy.giftLocked,
+            slot: copy.slot,
+        }),
+        [copy.active, copy.activeHint, copy.empty, copy.gift, copy.giftLocked, copy.slot]
+    );
+
+    const renderedPerfumeCards = useMemo(() => {
+        return filteredPerfumes.map((perfume) => {
+            const isSelectedForActiveSlot = slots[activeSlot] === perfume.id;
+
+            return (
+                <button
+                    key={perfume.id}
+                    type="button"
+                    onClick={() => handlePerfumeSelect(perfume.id)}
+                    className={`group relative flex flex-col items-stretch overflow-hidden rounded-[24px] border bg-white text-left transition-all hover:shadow-xl ${
+                        isSelectedForActiveSlot
+                            ? "border-[#2F9E5B] ring-2 ring-[#2F9E5B]/20"
+                            : "border-[#E6D6BE] hover:border-[#C9A86A]"
+                    }`}
+                >
+                    <div className="aspect-square bg-[linear-gradient(180deg,#fffdf9_0%,#f7f1e8_100%)] p-4">
+                        <div className="relative h-full w-full rounded-[20px] bg-white p-3 shadow-inner">
+                            <Image
+                                src={perfume.image}
+                                alt={perfume.name}
+                                fill
+                                sizes="(max-width: 768px) 50vw, 33vw"
+                                className="object-contain p-2 transition-transform duration-500 group-hover:scale-110"
+                            />
+                        </div>
+                    </div>
+
+                    <div className={`p-4 ${isRTL ? "text-right" : "text-left"}`}>
+                        <div className={`mb-2 flex flex-wrap items-center gap-1.5 ${isRTL ? "justify-end" : "justify-start"}`}>
+                            <span className="rounded-full bg-[#FCF3E2] px-2.5 py-0.5 text-[9px] font-bold text-[#B88E42]">
+                                {tierLabel(perfume.tier, language)}
+                            </span>
+                            <span className="text-[9px] font-medium text-[#8A7868]">{scentNotes(perfume, language)}</span>
+                        </div>
+
+                        <h4 className="min-h-[2.5em] line-clamp-2 text-[14px] font-bold leading-tight text-[#201A16]">
+                            {perfume.name}
+                        </h4>
+
+                        <div className={`mt-4 flex h-10 w-full items-center justify-center rounded-xl border text-[11px] font-bold transition-all ${
+                            isSelectedForActiveSlot
+                                ? "border-[#2F9E5B] bg-[#2F9E5B] text-white"
+                                : "border-[#2F9E5B] bg-white text-[#2F9E5B]"
+                        }`}>
+                            {isSelectedForActiveSlot ? (
+                                <span className="flex items-center gap-1.5">
+                                    <Check className="h-4 w-4" />
+                                    {copy.active}
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-1.5">
+                                    {isArabic ? "إضافة" : "Ajouter"}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </button>
+            );
+        });
+    }, [activeSlot, copy.active, filteredPerfumes, handlePerfumeSelect, isArabic, isRTL, language, slots]);
 
     if (!hasMounted) return null;
 
@@ -499,14 +661,7 @@ export function PackExperience() {
                             <div className="mt-8">
                                 <SlotSelector
                                     activeSlot={activeSlot}
-                                    copy={{
-                                        active: copy.active,
-                                        activeHint: copy.activeHint,
-                                        empty: copy.empty,
-                                        gift: copy.gift,
-                                        locked: copy.giftLocked,
-                                        slot: copy.slot,
-                                    }}
+                                    copy={slotSelectorCopy}
                                     dir={dir}
                                     giftUnlocked={firstFiveComplete}
                                     isRTL={isRTL}
@@ -516,7 +671,7 @@ export function PackExperience() {
                             </div>
 
                             {selectionError ? (
-                                <div className={`mt-6 rounded-[20px] border border-[#F0C7C7] bg-[#FDECEC] px-5 py-4 text-[14px] text-[#B44848] font-bold ${isRTL ? "text-right" : "text-left"}`}>
+                                <div className={`mt-6 rounded-[20px] border border-[#E8D6B7] bg-[#FFF9EE] px-5 py-4 text-[14px] text-[#9A6D2B] font-bold ${isRTL ? "text-right" : "text-left"}`}>
                                     {selectionError}
                                 </div>
                             ) : null}
@@ -534,7 +689,9 @@ export function PackExperience() {
                                 submitting={submitting}
                                 submitError={submitError}
                                 handleSubmit={handleSubmit}
-                                selectedCount={selectedCount}
+                                selectedMainCount={selectionProgress.mainCount}
+                                hasGiftSelected={selectionProgress.hasGiftSelected}
+                                canSubmitOrder={canSubmitOrder}
                                 formRef={checkoutRef}
                             />
                         </div>
@@ -597,63 +754,8 @@ export function PackExperience() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-                                {filteredPerfumes.map((perfume) => {
-                                    const isSelectedForActiveSlot = slots[activeSlot] === perfume.id;
-
-                                    return (
-                                        <button
-                                            key={perfume.id}
-                                            type="button"
-                                            onClick={() => handlePerfumeSelect(perfume.id)}
-                                            className={`group relative flex flex-col items-stretch overflow-hidden rounded-[24px] border bg-white text-left transition-all hover:shadow-xl ${isSelectedForActiveSlot
-                                                ? "border-[#2F9E5B] ring-2 ring-[#2F9E5B]/20"
-                                                : "border-[#E6D6BE] hover:border-[#C9A86A]"
-                                                }`}
-                                        >
-                                            <div className="aspect-square bg-[linear-gradient(180deg,#fffdf9_0%,#f7f1e8_100%)] p-4">
-                                                <div className="relative h-full w-full rounded-[20px] bg-white p-3 shadow-inner">
-                                                    <Image
-                                                        src={perfume.image}
-                                                        alt={perfume.name}
-                                                        fill
-                                                        sizes="(max-width: 768px) 50vw, 33vw"
-                                                        className="object-contain p-2 transition-transform duration-500 group-hover:scale-110"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className={`p-4 ${isRTL ? "text-right" : "text-left"}`}>
-                                                <div className={`flex flex-wrap items-center gap-1.5 mb-2 ${isRTL ? "justify-end" : "justify-start"}`}>
-                                                    <span className="rounded-full bg-[#FCF3E2] px-2.5 py-0.5 text-[9px] font-bold text-[#B88E42]">
-                                                        {tierLabel(perfume.tier, language)}
-                                                    </span>
-                                                    <span className="text-[9px] font-medium text-[#8A7868]">{scentNotes(perfume, language)}</span>
-                                                </div>
-
-                                                <h4 className="line-clamp-2 text-[14px] font-bold leading-tight text-[#201A16] min-h-[2.5em]">
-                                                    {perfume.name}
-                                                </h4>
-
-                                                <div className={`mt-4 flex h-10 w-full items-center justify-center rounded-xl border text-[11px] font-bold transition-all ${isSelectedForActiveSlot
-                                                    ? "border-[#2F9E5B] bg-[#2F9E5B] text-white"
-                                                    : "border-[#2F9E5B] bg-white text-[#2F9E5B]"
-                                                    }`}>
-                                                    {isSelectedForActiveSlot ? (
-                                                        <span className="flex items-center gap-1.5">
-                                                            <Check className="h-4 w-4" />
-                                                            {copy.active}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="flex items-center gap-1.5">
-                                                            {isArabic ? "إضافة" : "Ajouter"}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
+                                {renderedPerfumeCards}
                             </div>
 
                             {!filteredPerfumes.length && (
@@ -681,93 +783,15 @@ export function PackExperience() {
                                 submitting={submitting}
                                 submitError={submitError}
                                 handleSubmit={handleSubmit}
-                                selectedCount={selectedCount}
+                                selectedMainCount={selectionProgress.mainCount}
+                                hasGiftSelected={selectionProgress.hasGiftSelected}
+                                canSubmitOrder={canSubmitOrder}
                                 formRef={checkoutRef}
                             />
                         </div>
                     </aside>
                 </div>
             </div>
-
-            {/* Method B: Selection Modal / Bottom Sheet */}
-            {isCatalogOpen && (
-                <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-sm transition-all sm:items-center sm:p-6" dir={dir}>
-                    <div
-                        className="relative flex h-[85vh] w-full flex-col overflow-hidden bg-[#F7F1E8] shadow-2xl animate-in slide-in-from-bottom duration-300 sm:h-auto sm:max-h-[80vh] sm:max-w-3xl sm:rounded-[40px]"
-                        dir={dir}
-                    >
-                        {/* Modal Header */}
-                        <div className="sticky top-0 z-20 border-b border-[#E6D6BE] bg-white/80 p-5 backdrop-blur-md sm:p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h3 className={`text-[20px] md:text-[24px] ${isRTL ? "font-bold" : "font-[var(--font-display)] font-bold"}`}>
-                                        {copy.viewCatalog}
-                                    </h3>
-                                    <p className="mt-1 text-[12px] font-bold text-[#2F9E5B]">
-                                        {activeSlotLabel} • {catalogueCtaLabel}
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsCatalogOpen(false)}
-                                    className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F3E8D6] text-[#201A16] transition hover:bg-[#E6D6BE]"
-                                    aria-label={copy.close}
-                                >
-                                    <X className="h-5 w-5" />
-                                </button>
-                            </div>
-
-                            {/* Modal Categories Filter */}
-                            <div className={`mt-6 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar ${isRTL ? "flex-row-reverse" : ""}`}>
-                                {[
-                                    { value: "all" as const, label: isArabic ? "الكل" : "Tous" },
-                                    { value: "femme" as const, label: isArabic ? "نساء" : "Femme" },
-                                    { value: "homme" as const, label: isArabic ? "رجال" : "Homme" },
-                                ].map((option) => (
-                                    <button
-                                        key={option.value}
-                                        type="button"
-                                        onClick={() => setModalFilter(option.value)}
-                                        className={`whitespace-nowrap rounded-full px-5 py-2.5 text-[13px] font-bold transition-all ${modalFilter === option.value
-                                            ? "bg-[#B88E42] text-white shadow-lg"
-                                            : "bg-[#F3E8D6] text-[#6F6257] hover:bg-[#E6D6BE]"
-                                            }`}
-                                    >
-                                        {option.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Modal Body (Scrollable List) */}
-                        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                                {modalPerfumes.map((perfume) => {
-                                    const isSelectedForActiveSlot = slots[activeSlot] === perfume.id;
-                                    return (
-                                        <button
-                                            key={perfume.id}
-                                            onClick={() => handlePerfumeSelect(perfume.id)}
-                                            className={`group flex flex-col items-stretch overflow-hidden rounded-[20px] border bg-white transition-all ${isSelectedForActiveSlot ? "border-[#2F9E5B] ring-2 ring-[#2F9E5B]/10" : "border-[#E6D6BE]"
-                                                }`}
-                                        >
-                                            <div className="aspect-square bg-[#FFFDF9] p-3">
-                                                <div className="relative h-full w-full">
-                                                    <Image src={perfume.image} alt={perfume.name} fill className="object-contain" />
-                                                </div>
-                                            </div>
-                                            <div className="p-3">
-                                                <h4 className="line-clamp-2 text-[12px] font-bold text-[#201A16]">{perfume.name}</h4>
-                                                <p className="mt-1 text-[10px] text-[#8A7868]">{scentNotes(perfume, language)}</p>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             <footer className="mt-20 border-t border-[#E6D6BE] bg-[#FFF8EE] py-10 text-center text-[13px] text-[#6F6257]">
                 {copy.footer}
@@ -787,15 +811,17 @@ interface OrderFormProps {
     customer: CheckoutCustomer;
     updateCustomerField: (field: keyof CheckoutCustomer, value: string) => void;
     errors: Partial<Record<FieldErrorKey, string>>;
-    copy: any;
+    copy: CheckoutCopy;
     submitting: boolean;
     submitError: string;
     handleSubmit: (event: FormEvent<HTMLFormElement>) => void;
-    selectedCount: number;
+    selectedMainCount: number;
+    hasGiftSelected: boolean;
+    canSubmitOrder: boolean;
     formRef: React.RefObject<HTMLFormElement | null>;
 }
 
-function OrderForm({
+const OrderForm = memo(function OrderForm({
     isArabic,
     isRTL,
     customer,
@@ -805,9 +831,19 @@ function OrderForm({
     submitting,
     submitError,
     handleSubmit,
-    selectedCount,
+    selectedMainCount,
+    hasGiftSelected,
+    canSubmitOrder,
     formRef
 }: OrderFormProps) {
+    const progressText =
+        selectedMainCount < MAIN_SLOT_COUNT
+            ? copy.progressSelectMain
+            : hasGiftSelected
+                ? copy.progressReady
+                : copy.progressSelectGift;
+    const ctaLabel = canSubmitOrder ? copy.cta : copy.ctaLocked;
+
     return (
         <form
             ref={formRef}
@@ -819,10 +855,18 @@ function OrderForm({
                 <h2 className={`mt-3 text-[26px] ${isRTL ? "font-bold" : "font-[var(--font-display)] font-bold"}`}>
                     {copy.cardTitle}
                 </h2>
-                <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#F7F1E8] px-4 py-1.5 text-[14px] font-bold text-[#201A16]">
-                    <span>{PRICE_MAD} DH</span>
-                    <span className="h-1 w-1 rounded-full bg-[#B88E42]" />
-                    <span>{selectedCount}/6 {copy.statusFilled}</span>
+                <p className={`mt-4 inline-flex items-center gap-2 rounded-full border border-[#D6EAD8] bg-[#F2FBF4] px-4 py-2 text-[13px] font-bold text-[#2F9E5B] ${isRTL ? "flex-row-reverse" : ""}`}>
+                    <Check className="h-4 w-4" />
+                    <span>{progressText}</span>
+                </p>
+            </div>
+
+            <div className="mt-6 rounded-[20px] border border-[#E6D6BE] bg-[#FFF8EE] px-5 py-4">
+                <div className={`space-y-2 text-[13px] font-semibold text-[#6F6257] ${isRTL ? "text-right" : "text-left"}`}>
+                    <p className="font-bold text-[#201A16]">{copy.summaryPrice}</p>
+                    <p>{copy.summaryDelivery}</p>
+                    <p>{copy.summaryPayment}</p>
+                    <p>{copy.summaryGuide}</p>
                 </div>
             </div>
 
@@ -874,10 +918,10 @@ function OrderForm({
 
             <button
                 type="submit"
-                disabled={submitting}
-                className="relative mt-8 group h-[76px] w-full items-center justify-center rounded-[22px] bg-green-600 text-[26px] font-bold text-white shadow-xl shadow-green-600/30 transition-all hover:scale-[1.03] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 animate-[pulse_2s_ease-in-out_infinite]"
+                disabled={!canSubmitOrder}
+                className="relative mt-8 group h-[76px] w-full items-center justify-center rounded-[22px] bg-green-600 text-[24px] font-bold text-white shadow-xl shadow-green-600/30 transition-all hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none disabled:hover:scale-100"
             >
-                <span className="relative z-10">{submitting ? copy.loading : copy.cta}</span>
+                <span className="relative z-10">{submitting ? copy.loading : ctaLabel}</span>
             </button>
 
             <div className="mt-6 flex items-center justify-center gap-2 text-[#2F9E5B] text-[13px] font-bold">
@@ -886,4 +930,6 @@ function OrderForm({
             </div>
         </form>
     );
-}
+});
+
+OrderForm.displayName = "OrderForm";

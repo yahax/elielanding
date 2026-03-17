@@ -4,7 +4,8 @@ import React from "react";
 import { useStore } from "@/store/useStore";
 
 export function LanguageSwitcher() {
-    const { language, setLanguage } = useStore();
+    const language = useStore((state) => state.language);
+    const setLanguage = useStore((state) => state.setLanguage);
 
     return (
         <div className="flex items-center gap-1 p-1 bg-white/60 backdrop-blur-md rounded-full border border-zinc-200 shadow-sm" dir="ltr">

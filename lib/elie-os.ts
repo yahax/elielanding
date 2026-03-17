@@ -8,7 +8,17 @@ export interface ElieOSOrderPayload {
     locale: "ar" | "fr";
     offerType: "homme" | "femme" | "mixte";
     customerIntent: "لي" | "له" | "لها" | "للزوجين" | null;
-    items: {
+    slots: {
+        slot1: string;
+        slot2: string;
+        slot3: string;
+        slot4: string;
+        slot5: string;
+        giftSlot: string;
+    };
+    selected_perfumes: string[];
+    gift_perfume: string;
+    items?: {
         slot: number;
         name: string;
         free?: boolean;
@@ -33,6 +43,9 @@ export interface ElieOSOrderPayload {
         utm_adset?: string;
         utm_ad?: string;
         referrer?: string;
+        idempotency_key?: string;
+        checkout_security?: Record<string, unknown>;
+        [key: string]: unknown;
     };
 }
 

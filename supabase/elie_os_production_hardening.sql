@@ -77,6 +77,26 @@ CREATE POLICY "Public read settings" ON shop_settings FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Auth manage settings" ON shop_settings;
 CREATE POLICY "Auth manage settings" ON shop_settings FOR ALL USING (auth.role() = 'authenticated');
 
+-- Database-level safeguards: refuse incomplete ELIE 5+1 orders.
+DO $$
+BEGIN
+    IF to_regclass('public.orders') IS NOT NULL THEN
+        ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_selected_perfumes_len_chk;
+        ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_gift_perfume_nonempty_chk;
+        ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_selected_gift_unique_chk;
+
+        ALTER TABLE orders
+            ADD CONSTRAINT orders_selected_perfumes_len_chk
+                CHECK (COALESCE(array_length(selected_perfumes, 1), 0) = 5) NOT VALID,
+            ADD CONSTRAINT orders_gift_perfume_nonempty_chk
+                CHECK (gift_perfume IS NOT NULL AND btrim(gift_perfume) <> '') NOT VALID;
+
+        CREATE INDEX IF NOT EXISTS idx_orders_idempotency_key
+            ON orders ((meta->>'idempotency_key'))
+            WHERE (meta->>'idempotency_key') IS NOT NULL AND btrim(meta->>'idempotency_key') <> '';
+    END IF;
+END $$;
+
 -- 5. RPC FUNCTIONS
 -- Secure order creation tied to perfumes/inventory
 CREATE OR REPLACE FUNCTION create_order_secure(
@@ -94,7 +114,59 @@ CREATE OR REPLACE FUNCTION create_order_secure(
 DECLARE
     v_order_id UUID;
     v_perfume_name TEXT;
+    v_existing_order_id UUID;
+    v_idempotency_key TEXT;
 BEGIN
+    IF p_customer_name IS NULL OR btrim(p_customer_name) = '' THEN
+        RAISE EXCEPTION 'Le nom client est obligatoire.';
+    END IF;
+
+    IF p_phone IS NULL OR btrim(p_phone) = '' THEN
+        RAISE EXCEPTION 'Le téléphone client est obligatoire.';
+    END IF;
+
+    IF p_city IS NULL OR btrim(p_city) = '' THEN
+        RAISE EXCEPTION 'La ville client est obligatoire.';
+    END IF;
+
+    IF p_pack_type IS NULL OR btrim(p_pack_type) NOT IN ('homme', 'femme', 'mixte') THEN
+        RAISE EXCEPTION 'Pack invalide.';
+    END IF;
+
+    IF p_source IS NULL OR btrim(p_source) = '' THEN
+        RAISE EXCEPTION 'Source obligatoire.';
+    END IF;
+
+    IF p_total_price <> 199 THEN
+        RAISE EXCEPTION 'Prix invalide pour l''offre ELIE.';
+    END IF;
+
+    IF COALESCE(array_length(p_perfumes, 1), 0) <> 6 THEN
+        RAISE EXCEPTION 'Une commande ELIE nécessite exactement 6 parfums.';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM unnest(p_perfumes) AS perfume_name
+        WHERE perfume_name IS NULL OR btrim(perfume_name) = ''
+    ) THEN
+        RAISE EXCEPTION 'Les slots parfum sont incomplets.';
+    END IF;
+
+    v_idempotency_key := NULLIF(btrim(COALESCE(p_meta->>'idempotency_key', '')), '');
+    IF v_idempotency_key IS NOT NULL THEN
+        SELECT id
+        INTO v_existing_order_id
+        FROM orders
+        WHERE meta->>'idempotency_key' = v_idempotency_key
+        ORDER BY created_at DESC
+        LIMIT 1;
+
+        IF v_existing_order_id IS NOT NULL THEN
+            RETURN v_existing_order_id;
+        END IF;
+    END IF;
+
     INSERT INTO orders (
         customer_name, phone, city, address, pack_type, 
         selected_perfumes, gift_perfume, 
@@ -102,10 +174,10 @@ BEGIN
         source, status, meta, created_at, updated_at
     )
     VALUES (
-        p_customer_name, p_phone, p_city, p_address, p_pack_type, 
-        p_perfumes[1:5], p_perfumes[6],
-        p_total_price, p_total_price, COALESCE(p_offer_mode, 'ramadan'), 'free',
-        p_source, 'new', p_meta, now(), now()
+        btrim(p_customer_name), btrim(p_phone), btrim(p_city), COALESCE(NULLIF(btrim(p_address), ''), btrim(p_city)), btrim(p_pack_type), 
+        p_perfumes[1:5], btrim(p_perfumes[6]),
+        p_total_price, p_total_price, COALESCE(NULLIF(btrim(p_offer_mode), ''), 'ramadan'), 'free',
+        btrim(p_source), 'new', COALESCE(p_meta, '{}'::jsonb), now(), now()
     )
     RETURNING id INTO v_order_id;
 
