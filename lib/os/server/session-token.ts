@@ -41,7 +41,7 @@ async function hmacSha256(secret: string, value: string): Promise<string> {
     .join("");
 }
 
-function safeEqual(a: string, b: string): boolean {
+export function safeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
 
   let result = 0;

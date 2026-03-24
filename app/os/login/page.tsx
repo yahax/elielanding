@@ -25,7 +25,11 @@ function LoginPageInner() {
             const data = (await res.json()) as { error?: string };
 
             if (!res.ok) {
-                setError(data.error || 'Mot de passe incorrect.');
+                if (res.status === 500 && data.error === 'Server configuration error') {
+                    setError('Configuration serveur incomplète. Vérifiez les variables d\'environnement.');
+                } else {
+                    setError(data.error || 'Mot de passe incorrect.');
+                }
                 return;
             }
 

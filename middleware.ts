@@ -25,7 +25,7 @@ export async function middleware(request: NextRequest) {
     if (!secret) {
         console.error('[Middleware] ELIE_OS_SECRET not configured.');
         if (isOsApi) {
-            return NextResponse.json({ error: 'Server auth secret is missing.' }, { status: 500 });
+            return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
         }
         return NextResponse.redirect(new URL('/os/login', request.url));
     }
