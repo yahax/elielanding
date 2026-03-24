@@ -12,8 +12,11 @@ const querySchema = z.object({
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const parsed = querySchema.parse(Object.fromEntries(url.searchParams.entries()));
-    const periodDays = parsed.days ?? 30;
+    const parsed = querySchema.safeParse(Object.fromEntries(url.searchParams.entries()));
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid query params" }, { status: 400 });
+    }
+    const periodDays = parsed.data.days ?? 30;
 
     const [orders, catalog] = await Promise.all([
       ordersRepository.listNormalizedOrders({
@@ -48,6 +51,8 @@ export async function GET(req: Request) {
       { status: 200 }
     );
   } catch (error) {
-    return toApiErrorResponse(error, "Unable to load dashboard analytics");
+    console.warn("[API/OS] dashboard fallback empty stats:", error);
+    const bundle = buildAnalyticsBundle({ orders: [], periodDays: 30, lowStockAlerts: [] });
+    return NextResponse.json({ snapshot: bundle.dashboard, overview: bundle.overview }, { status: 200 });
   }
 }

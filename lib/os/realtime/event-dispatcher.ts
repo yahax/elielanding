@@ -92,26 +92,6 @@ export async function dispatchDomainEvent(input: DispatchDomainEventInput): Prom
     if (error && !isMissingTableError(error)) {
       console.warn("[EVENT] os_domain_events insert failed:", error);
     }
-
-    try {
-      await supabase.from("events").insert({
-        type: event.type,
-        entity_type: event.entityType,
-        entity_id: toLegacyEventEntityUuid(event.entityId),
-        payload: {
-          ...event.payload,
-          eventId: event.id,
-          eventType: event.type,
-          actorId: event.actorId,
-          actorName: event.actorName,
-          label: event.label,
-          rawEntityId: event.entityId,
-        },
-        created_at: event.createdAt,
-      });
-    } catch {
-      // Legacy events table may not exist — silently fall through to memory store
-    }
   } catch (error) {
     console.warn("[EVENT] Falling back to memory store:", error);
   }
@@ -143,41 +123,6 @@ export async function listDomainEvents(params?: {
 
     if (error && !isMissingTableError(error)) {
       console.warn("[EVENT] list os_domain_events failed:", error);
-    }
-
-    const { data: legacyData, error: legacyError } = await supabase
-      .from("events")
-      .select("id,type,entity_type,entity_id,payload,created_at")
-      .in("type", [
-        "order.created",
-        "order.updated",
-        "order.confirmed",
-        "order.cancelled",
-        "order.assigned",
-        "stock.updated",
-        "notification.created",
-        "settings.updated",
-        "audit.logged",
-      ])
-      .order("created_at", { ascending: false })
-      .limit(limit);
-
-    if (!legacyError && legacyData) {
-      return legacyData.map((row) => ({
-        id: String((row.payload as Record<string, unknown> | null)?.eventId ?? row.id ?? randomUUID()),
-        type: String(row.type) as DomainEventType,
-        entityType: String(row.entity_type ?? "system") as DomainEvent["entityType"],
-        entityId: String((row.payload as Record<string, unknown> | null)?.rawEntityId ?? row.entity_id ?? "unknown"),
-        actorId: ((row.payload as Record<string, unknown> | null)?.actorId as string | undefined) ?? null,
-        actorName: ((row.payload as Record<string, unknown> | null)?.actorName as string | undefined) ?? null,
-        label: String((row.payload as Record<string, unknown> | null)?.label ?? row.type ?? "Event"),
-        payload: (row.payload as Record<string, unknown> | null) ?? {},
-        createdAt: String(row.created_at ?? new Date().toISOString()),
-      }));
-    }
-
-    if (legacyError) {
-      console.warn("[EVENT] list legacy events failed:", legacyError);
     }
   } catch (error) {
     console.warn("[EVENT] list fallback memory due to error:", error);

@@ -96,18 +96,6 @@ export async function logAuditEntry(input: CreateAuditLogInput): Promise<AuditLo
     if (error && !isMissingTableError(error)) {
       console.warn("[AUDIT] Failed to insert in os_audit_logs:", error);
     }
-
-    // Fallback bridge: keep some persistence via legacy events table when available.
-    await supabase.from("events").insert({
-      type: "audit.logged",
-      entity_type: input.entityType,
-      entity_id: toEventUuid(input.entityId),
-      payload: {
-        ...entry,
-        rawEntityId: input.entityId,
-      },
-      created_at: entry.createdAt,
-    });
   } catch (error) {
     console.warn("[AUDIT] Falling back to memory store:", error);
   }

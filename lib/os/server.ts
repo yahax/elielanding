@@ -93,8 +93,8 @@ export async function fetchOrders(filters: OrderFilters = {}): Promise<Normalize
 
   const { data, error } = await query;
   if (error) {
-    console.error("[OS/SERVER] fetchOrders error:", error);
-    throw error;
+    console.warn("[OS/SERVER] fetchOrders fell back to empty array due to error:", error.message || error);
+    return [];
   }
 
   return (data || []).map((row) => mapOrderRow(row as OrderRow));
@@ -219,7 +219,15 @@ export async function fetchOverview(days = 30) {
       lowStockAlerts,
     };
   } catch (err) {
-    console.error("[OS/SERVER] fetchOverview hard failure:", err);
-    throw err;
+    console.warn("[OS/SERVER] fetchOverview fell back to zero stats due to error:", err instanceof Error ? err.message : err);
+    return {
+      stats: { total_orders: 0, revenue: 0, confirmed: 0, shipped: 0, delivered: 0, canceled: 0, top_cities: [], top_perfumes: [], source_breakdown: {} },
+      recentOrders: [],
+      todayRevenue: 0,
+      todayOrders: 0,
+      avgBasket: 0,
+      confirmationRate: 0,
+      lowStockAlerts: [],
+    };
   }
 }

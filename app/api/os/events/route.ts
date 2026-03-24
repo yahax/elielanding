@@ -26,6 +26,7 @@ export async function GET(req: Request) {
       { status: 200 }
     );
   } catch (error) {
-    return toApiErrorResponse(error, "Unable to load domain events");
+    console.warn("[API/OS] events fallback empty list:", error);
+    return NextResponse.json({ events: [], nextCursor: null }, { status: 200 });
   }
 }
