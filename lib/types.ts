@@ -48,6 +48,7 @@ export interface Customer {
 // ── Order ─────────────────────────────────────────────────
 export interface Order {
     id: string;
+    reference?: string;
     customer_id?: string | null;
     customer_name: string | null;
     phone: string | null;
@@ -69,6 +70,7 @@ export interface Order {
     selected_perfumes?: string[] | null;
     gift_perfume?: string | null;
     offer_mode?: string | null;
+    meta?: Record<string, unknown> | null;
     // Joined data (Deprecated - order_items table does not exist)
     items?: any[];
 }

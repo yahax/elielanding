@@ -2,8 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Search, Bell, Settings, ArrowRight, Activity, Sparkles } from 'lucide-react';
+import { Search, ArrowRight, Activity } from 'lucide-react';
 import { searchOs } from '@/lib/os/api';
+import { NotificationBell } from '@/components/os/notifications/NotificationBell';
+import { useRealtimeFeed } from '@/hooks/useRealtimeFeed';
+import { LiveStatusDot } from '@/components/os/live/LiveStatusDot';
 
 type SearchResult = {
     type: string;
@@ -20,8 +23,9 @@ const PAGE_TITLES: Record<string, string> = {
     '/os/inventory': 'Inventaire',
     '/os/products': 'Produits',
     '/os/clients': 'Clients',
-    '/os/intelligence': 'Intelligence',
+    '/os/intelligence': 'Business Signals',
     '/os/tracking': 'Tracking',
+    '/os/notifications': 'Notifications',
     '/os/settings': 'Paramètres',
 };
 
@@ -46,6 +50,7 @@ export function TopBar() {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<SearchResult[]>([]);
     const [loading, setLoading] = useState(false);
+    const { realtimeStatus } = useRealtimeFeed();
 
     const title = useMemo(() => PAGE_TITLES[pathname] || 'Dashboard', [pathname]);
 
@@ -74,11 +79,10 @@ export function TopBar() {
     return (
         <header className="topbar">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <h1 className="topbar-title" style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', fontFamily: 'serif' }}>{title}</h1>
+                <div className="topbar-title" style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', fontFamily: 'serif' }}>{title}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--success)' }} />
-                        <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', letterSpacing: '0.05em' }}>OPÉRATIONS LIVE</span>
+                        <LiveStatusDot status={realtimeStatus} compact />
                     </div>
                     <span style={{ color: 'var(--border)', fontSize: 10 }}>•</span>
                     <LiveClock />
@@ -92,6 +96,7 @@ export function TopBar() {
                         type="text"
                         className="filter-input"
                         placeholder="Rechercher client, téléphone, ville..."
+                        aria-label="Recherche globale OS"
                         style={{
                             width: '100%',
                             height: 48,
@@ -106,7 +111,7 @@ export function TopBar() {
                     />
 
                     {(loading || results.length > 0 || query.trim().length >= 2) && (
-                        <div className="luxury-card" style={{
+                        <div className="luxury-card os-search-results" role="listbox" style={{
                             position: 'absolute',
                             top: 56,
                             left: 0,
@@ -126,12 +131,14 @@ export function TopBar() {
                                     <button
                                         key={`${result.type}-${result.id}`}
                                         type="button"
+                                        role="option"
+                                        aria-selected={false}
                                         onClick={() => {
                                             router.push(result.href || '/os');
                                             setQuery('');
                                             setResults([]);
                                         }}
-                                        className="search-result-item"
+                                        className="search-result-item os-search-result-item"
                                         style={{
                                             width: '100%',
                                             display: 'flex',
@@ -181,9 +188,7 @@ export function TopBar() {
 
                 <div style={{ height: 24, width: 1, background: 'var(--border)' }} />
 
-                <button className="btn-ghost" style={{ width: 44, height: 44, padding: 0, borderRadius: 14, background: 'var(--surface)' }}>
-                    <Bell size={18} style={{ color: 'var(--text-muted)' }} />
-                </button>
+                <NotificationBell />
 
                 <div className="topbar-avatar" style={{
                     width: 44,

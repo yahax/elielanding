@@ -6,18 +6,23 @@ export function PageHeader({
     title,
     subtitle,
     actions,
+    eyebrow,
+    dense,
 }: {
     title: string;
     subtitle?: string;
     actions?: ReactNode;
+    eyebrow?: string;
+    dense?: boolean;
 }) {
     return (
-        <div className="page-header">
-            <div>
-                <h2 className="page-title">{title}</h2>
+        <header className={`page-header ${dense ? 'page-header-dense' : ''}`}>
+            <div className="page-header-main">
+                {eyebrow ? <span className="page-eyebrow">{eyebrow}</span> : null}
+                <h1 className="page-title">{title}</h1>
                 {subtitle ? <p className="page-subtitle">{subtitle}</p> : null}
             </div>
-            {actions ? <div style={{ display: 'flex', gap: 10 }}>{actions}</div> : null}
-        </div>
+            {actions ? <div className="page-actions">{actions}</div> : null}
+        </header>
     );
 }

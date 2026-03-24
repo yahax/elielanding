@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { fetchOrders } from "@/lib/os/server";
-import type { OrderStatus, PackType } from "@/lib/types";
+import { ordersRepository } from "@/lib/os/orders/repositories/orders-repository";
 
 const querySchema = z.object({
   status: z.string().optional(),
   source: z.string().optional(),
+  city: z.string().optional(),
   pack: z.string().optional(),
   search: z.string().optional(),
   limit: z.coerce.number().int().positive().optional(),
@@ -28,10 +28,11 @@ export async function GET(req: Request) {
     }
 
     const filters = parsed.data;
-    const orders = await fetchOrders({
-      status: (filters.status || "") as OrderStatus | "",
+    const orders = await ordersRepository.listNormalizedOrders({
+      status: filters.status,
       source: filters.source,
-      pack: (filters.pack || "") as PackType | "",
+      city: filters.city,
+      pack: filters.pack,
       search: filters.search,
       limit: filters.limit,
       pipeline: filters.pipeline,

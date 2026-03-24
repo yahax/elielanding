@@ -1,24 +1,15 @@
 'use client';
 
-import { AlertTriangle, Inbox, Loader2 } from 'lucide-react';
+import { AlertTriangle, Inbox } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 export function LoadingState({ label = 'Chargement en cours…' }: { label?: string }) {
     return (
-        <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '120px 40px',
-            textAlign: 'center',
-            background: 'var(--bg)',
-            height: '100%'
-        }}>
-            <div style={{ position: 'relative', width: 44, height: 44, marginBottom: 32 }}>
-                <div className="animate-spin" style={{ position: 'absolute', inset: 0, border: '2px solid var(--border)', borderTop: '2px solid var(--gold)', borderRadius: '50%' }} />
+        <div className="os-state-card os-state-card-loading" role="status" aria-live="polite">
+            <div style={{ position: 'relative', width: 44, height: 44, marginBottom: 24 }}>
+                <div className="animate-spin" style={{ position: 'absolute', inset: 0, border: '2px solid var(--border)', borderTop: '2px solid var(--gold)', borderRadius: '50%' }} aria-hidden />
             </div>
-            <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.2em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 12 }}>Maison ELIE</div>
+            <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.2em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 10 }}>ELIE OS</div>
             <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13, fontWeight: 700, letterSpacing: '0.05em' }}>{label.toUpperCase()}</p>
         </div>
     );
@@ -34,14 +25,7 @@ export function ErrorState({
     onRetry?: () => void;
 }) {
     return (
-        <div className="luxury-card" style={{
-            border: '1px solid rgba(239, 68, 68, 0.2)',
-            background: 'rgba(239, 68, 68, 0.02)',
-            padding: 28,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 24
-        }}>
+        <div className="luxury-card os-state-card os-state-card-error" role="alert">
             <div style={{
                 width: 48,
                 height: 48,
@@ -61,7 +45,7 @@ export function ErrorState({
                 <p style={{ margin: 0, fontSize: 14, color: 'var(--text-muted)', fontWeight: 600 }}>{message}</p>
             </div>
             {onRetry ? (
-                <button type="button" className="btn btn-secondary btn-sm" onClick={onRetry} style={{ height: 42, borderRadius: 12, fontWeight: 900 }}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={onRetry} style={{ height: 42, borderRadius: 12, fontWeight: 900 }}>
                     RÉESSAYER
                 </button>
             ) : null}
@@ -79,16 +63,7 @@ export function EmptyState({
     action?: ReactNode;
 }) {
     return (
-        <div className="luxury-card" style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '100px 40px',
-            textAlign: 'center',
-            minHeight: 320,
-            background: 'var(--surface)'
-        }}>
+        <div className="luxury-card os-state-card os-state-card-empty">
             <div style={{ width: 68, height: 68, borderRadius: 20, background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28, color: 'var(--text-dim)', border: '1px solid var(--border)' }}>
                 <Inbox size={32} strokeWidth={1.5} />
             </div>

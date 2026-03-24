@@ -1,184 +1,221 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import {
-    ResponsiveContainer,
-    PieChart,
-    Pie,
-    Cell,
-    Tooltip,
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid
-} from 'recharts';
-import { fetchOverview } from '@/lib/os/api';
-import type { OverviewResponse } from '@/lib/os/types';
-import { EmptyState, ErrorState, LoadingState } from '@/components/ui/States';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { TrendingUp, Globe, MapPin, RefreshCw } from 'lucide-react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { fetchTrackingAnalytics } from "@/lib/os/api";
+import { buildTrackingQuery, parseTrackingFiltersFromSearchParams } from "@/lib/os/domain/query-filters";
+import type { TrackingSnapshot } from "@/lib/os/tracking/types";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { LoadingSkeletonBlock } from "@/components/ui/LoadingSkeletonBlock";
+import { DataStateWrapper } from "@/components/ui/DataStateWrapper";
+import { TrackingHero } from "@/components/os/tracking/TrackingHero";
+import { FunnelCard } from "@/components/os/tracking/FunnelCard";
+import { PerformanceBreakdownCard } from "@/components/os/tracking/PerformanceBreakdownCard";
+import { NarrativeInsightCard } from "@/components/os/tracking/NarrativeInsightCard";
 
-const COLORS = ['#D4AF37', '#9CA3AF', '#4B5563', '#1F2937', '#D1D5DB', '#E5E7EB'];
+type Timeframe = 7 | 30;
+
+const EMPTY_SNAPSHOT: TrackingSnapshot = {
+  metrics: [],
+  sourceBreakdown: { id: "source", title: "", description: "", rows: [] },
+  cityBreakdown: { id: "city", title: "", description: "", rows: [] },
+  productBreakdown: { id: "product", title: "", description: "", rows: [] },
+  statusBreakdown: { id: "status", title: "", description: "", rows: [] },
+  temporalBreakdown: { id: "temporal", title: "", description: "", rows: [] },
+  funnel: [],
+  topCities: [],
+  topProducts: [],
+  topSources: [],
+  topCustomerSegments: [],
+  narratives: [],
+  hourlyHeatmap: [],
+};
+
+function TrackingPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const isMobile = useIsMobile(1024);
+  const [timeframe, setTimeframe] = useState<Timeframe>(30);
+  const [lastQuery, setLastQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [snapshot, setSnapshot] = useState<TrackingSnapshot>(EMPTY_SNAPSHOT);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetchTrackingAnalytics(timeframe);
+      setSnapshot(response.snapshot.snapshot);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Impossible de charger le tracking");
+    } finally {
+      setLoading(false);
+    }
+  }, [timeframe]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    const query = searchParams.toString();
+    setLastQuery(query);
+    const parsed = parseTrackingFiltersFromSearchParams(searchParams);
+    if (parsed.range === "7d") setTimeframe(7);
+    if (parsed.range === "30d") setTimeframe(30);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const href = buildTrackingQuery({ range: timeframe === 7 ? "7d" : "30d" });
+    const query = href.includes("?") ? href.split("?")[1] ?? "" : "";
+    if (query === lastQuery) return;
+    setLastQuery(query);
+    router.replace(href, { scroll: false });
+  }, [lastQuery, router, timeframe]);
+
+  const hasData = useMemo(() => snapshot.metrics[0]?.value > 0, [snapshot]);
+
+  return (
+    <div className="os-page animate-fade-in" style={{ paddingBottom: 96, gap: 12 }}>
+      <TrackingHero periodDays={timeframe} onPeriodChange={setTimeframe} onRefresh={load} refreshing={loading} metrics={snapshot.metrics} />
+
+      {loading && hasData ? <LoadingSkeletonBlock compact lines={2} /> : null}
+
+      <DataStateWrapper
+        loading={loading && !hasData}
+        error={error}
+        empty={!hasData}
+        emptyTitle="Aucune donnée tracking"
+        emptyCopy="Le tracking s'active automatiquement dès les premières commandes."
+        loadingLabel="Agrégation des métriques business..."
+        onRetry={load}
+        useSkeleton
+      >
+        <>
+          <section style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+            {snapshot.metrics.map((metric) => (
+              <div key={metric.id} className="luxury-card" style={{ padding: 12, borderRadius: 14 }}>
+                <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-dim)", fontWeight: 900 }}>
+                  {metric.label}
+                </div>
+                <div style={{ marginTop: 6, fontSize: 20, fontWeight: 900, color: "var(--text)" }}>{metric.valueLabel}</div>
+                <div style={{ marginTop: 5, fontSize: 11, color: "var(--text-dim)", fontWeight: 700 }}>{metric.sub}</div>
+              </div>
+            ))}
+          </section>
+
+          <section style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.15fr 1fr", gap: 10 }}>
+            <FunnelCard stages={snapshot.funnel} />
+            <section className="luxury-card" style={{ padding: 16, borderRadius: 18 }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  color: "var(--text-dim)",
+                  fontWeight: 900,
+                  marginBottom: 10,
+                }}
+              >
+                Heatmap horaire
+              </div>
+              <div style={{ height: 260 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={snapshot.hourlyHeatmap}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.6} />
+                    <XAxis dataKey="hour" tick={{ fill: "var(--text-dim)", fontSize: 11, fontWeight: 700 }} interval={2} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "var(--text-dim)", fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{
+                        background: "var(--surface)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 12,
+                        fontSize: 12,
+                        color: "var(--text)",
+                      }}
+                    />
+                    <Bar dataKey="orders" fill="var(--gold)" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
+          </section>
+
+          <section style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+            <PerformanceBreakdownCard breakdown={snapshot.sourceBreakdown} />
+            <PerformanceBreakdownCard breakdown={snapshot.cityBreakdown} />
+            <PerformanceBreakdownCard breakdown={snapshot.productBreakdown} />
+            <PerformanceBreakdownCard breakdown={snapshot.statusBreakdown} />
+            <PerformanceBreakdownCard breakdown={snapshot.temporalBreakdown} />
+          </section>
+
+          <section style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, minmax(0, 1fr))", gap: 8 }}>
+            <div className="luxury-card" style={{ padding: 12, borderRadius: 14 }}>
+              <div style={{ fontSize: 11, color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 900 }}>Top villes</div>
+              <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                {snapshot.topCities.slice(0, 5).map((item) => (
+                  <div key={item.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text)", fontWeight: 800 }}>
+                    <span>{item.label}</span>
+                    <span>{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="luxury-card" style={{ padding: 12, borderRadius: 14 }}>
+              <div style={{ fontSize: 11, color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 900 }}>Top produits</div>
+              <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                {snapshot.topProducts.slice(0, 5).map((item) => (
+                  <div key={item.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text)", fontWeight: 800 }}>
+                    <span>{item.label}</span>
+                    <span>{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="luxury-card" style={{ padding: 12, borderRadius: 14 }}>
+              <div style={{ fontSize: 11, color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 900 }}>Top sources</div>
+              <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                {snapshot.topSources.slice(0, 5).map((item) => (
+                  <div key={item.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text)", fontWeight: 800 }}>
+                    <span>{item.label}</span>
+                    <span>{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="luxury-card" style={{ padding: 12, borderRadius: 14 }}>
+              <div style={{ fontSize: 11, color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 900 }}>Top segments clients</div>
+              <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                {snapshot.topCustomerSegments.slice(0, 5).map((item) => (
+                  <div key={item.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text)", fontWeight: 800 }}>
+                    <span>{item.label}</span>
+                    <span>{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+            {snapshot.narratives.map((narrative) => (
+              <NarrativeInsightCard key={narrative.id} item={narrative} />
+            ))}
+          </section>
+        </>
+      </DataStateWrapper>
+    </div>
+  );
+}
 
 export default function TrackingPage() {
-    const [data, setData] = useState<OverviewResponse | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-
-    const load = async (showToast = false) => {
-        setLoading(true);
-        setError('');
-        try {
-            const response = await fetchOverview(30);
-            setData(response);
-            if (showToast) {
-                // Not using toast here to avoid cluttering, but keeping the pattern
-            }
-        } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'Impossible de charger le tracking';
-            setError(message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => { load(); }, []);
-
-    const stats = data?.stats;
-    const total = stats?.total_orders || 0;
-    const confirmed = stats?.confirmed || 0;
-    const delivered = stats?.delivered || 0;
-    const canceled = stats?.canceled || 0;
-
-    const funnel = [
-        { label: 'Flux Total', value: total, color: 'var(--text-dim)' },
-        { label: 'Confirmé', value: confirmed, color: 'var(--gold)' },
-        { label: 'Livré', value: delivered, color: 'var(--success)' },
-        { label: 'Annulé', value: canceled, color: 'var(--danger)' },
-    ];
-
-    const sourceData = Object.entries(stats?.source_breakdown || {}).map(([name, value]) => ({ name, value }));
-
-    return (
-        <div className="os-page animate-fade-in" style={{ paddingBottom: 100 }}>
-            <PageHeader
-                title="Cockpit Analytique"
-                subtitle="Intelligence stratégique des flux et monitoring de conversion Maison ELIE"
-                actions={
-                    <button className="btn-ghost" onClick={() => load(true)} style={{ width: 44, height: 44, padding: 0, borderRadius: 14, background: 'var(--surface)' }}>
-                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                    </button>
-                }
-            />
-
-            {loading && !data ? <LoadingState label="Agrégation des signaux de performance..." /> : null}
-            {error ? <ErrorState message={error} /> : null}
-
-            {!loading && !error && total === 0 ? (
-                <EmptyState
-                    title="Aucune donnée synchronisée"
-                    copy="Les indicateurs apparaissent automatiquement dès qu'une commande est enregistrée dans le système."
-                />
-            ) : data && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 32 }}>
-                    <div className="luxury-card" style={{ padding: 40, background: 'var(--surface)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 40 }}>
-                            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--gold-glow)', color: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--gold-border)' }}>
-                                <TrendingUp size={20} />
-                            </div>
-                            <h3 style={{ margin: 0, fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-dim)' }}>Tunnel de Conversion</h3>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-                            {funnel.map((step) => {
-                                const percentage = total > 0 ? Math.round((step.value / total) * 100) : 0;
-                                return (
-                                    <div key={step.label} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                                            <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{step.label}</span>
-                                            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                                                <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-dim)', opacity: 0.6 }}>{percentage}%</span>
-                                                <span style={{ fontSize: 20, fontWeight: 900, color: 'var(--text)' }}>{step.value}</span>
-                                            </div>
-                                        </div>
-                                        <div style={{ height: 10, background: 'var(--bg-elevated)', borderRadius: 5, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                                            <div style={{ width: `${Math.max(2, percentage)}%`, height: '100%', background: step.color, borderRadius: 5, transition: 'width 1s cubic-bezier(0.16, 1, 0.3, 1)' }} />
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    <div className="luxury-card" style={{ padding: 40, background: 'var(--surface)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 40 }}>
-                            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--gold-glow)', color: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--gold-border)' }}>
-                                <Globe size={20} />
-                            </div>
-                            <h3 style={{ margin: 0, fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-dim)' }}>Curation des Sources</h3>
-                        </div>
-                        <div style={{ height: 280, position: 'relative' }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={sourceData}
-                                        dataKey="value"
-                                        nameKey="name"
-                                        innerRadius={80}
-                                        outerRadius={115}
-                                        paddingAngle={6}
-                                        stroke="none"
-                                    >
-                                        {sourceData.map((_, index) => (
-                                            <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip
-                                        contentStyle={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: 'var(--shadow-xl)', fontWeight: 900, fontSize: 13, color: 'var(--text)' }}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                                <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.02em' }}>{total}</div>
-                                <div style={{ fontSize: 10, fontWeight: 900, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>FLUX TOTAL</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="luxury-card" style={{ padding: 50, gridColumn: '1 / -1', background: 'var(--surface)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 50 }}>
-                            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--gold-glow)', color: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--gold-border)' }}>
-                                <MapPin size={20} />
-                            </div>
-                            <h3 style={{ margin: 0, fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-dim)' }}>Segmentation Géographique</h3>
-                        </div>
-                        <div style={{ height: 360 }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={stats?.top_cities || []} margin={{ top: 0, right: 0, left: -10, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.6} />
-                                    <XAxis
-                                        dataKey="city"
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: 'var(--text-dim)', fontSize: 12, fontWeight: 800 }}
-                                        dy={12}
-                                    />
-                                    <YAxis
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: 'var(--text-dim)', fontSize: 12, fontWeight: 800 }}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: 'var(--shadow-xl)', fontWeight: 900, fontSize: 13 }}
-                                        cursor={{ fill: 'var(--bg-elevated)', opacity: 0.5 }}
-                                    />
-                                    <Bar dataKey="count" fill="var(--gold)" radius={[8, 8, 0, 0]} barSize={54} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
+  return (
+    <Suspense fallback={<div className="os-page" style={{ padding: 32, textAlign: "center", color: "var(--text-dim)" }}>Chargement tracking...</div>}>
+      <TrackingPageInner />
+    </Suspense>
+  );
 }
