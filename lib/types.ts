@@ -113,13 +113,13 @@ export interface DashboardStats {
 
 // ── Status labels (French) ──────────────────────────────────
 export const STATUS_LABELS: Record<OrderStatus, string> = {
-    new: 'Nouveau',
+    new: 'Nouvelles',
     to_confirm: 'À confirmer',
-    confirmed: 'Confirmé',
-    shipped: 'Expédié',
-    delivered: 'Livré',
-    canceled: 'Annulé',
-    callback: 'À rappeler',
+    confirmed: 'Confirmées',
+    shipped: 'Expédiées',
+    delivered: 'Livrées',
+    canceled: 'Annulées',
+    callback: 'Callbacks',
 };
 
 export const STATUS_LIST: OrderStatus[] = [

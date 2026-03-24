@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { ordersRepository } from "@/lib/os/orders/repositories/orders-repository";
 
+export const dynamic = "force-dynamic";
+
 const querySchema = z.object({
   status: z.string().optional(),
   source: z.string().optional(),
@@ -28,6 +30,8 @@ export async function GET(req: Request) {
     }
 
     const filters = parsed.data;
+    console.log("[API/OS] Fetching orders with filters:", filters);
+    
     const orders = await ordersRepository.listNormalizedOrders({
       status: filters.status,
       source: filters.source,
@@ -39,9 +43,16 @@ export async function GET(req: Request) {
       days: filters.days,
     });
 
+    console.log(`[API/OS] Orders fetched: ${orders.length}`);
     return NextResponse.json({ orders }, { status: 200 });
-  } catch (error: unknown) {
-    console.warn("[API/OS] orders fallback empty list:", error);
+  } catch (error: any) {
+    console.error("[API/OS] orders fallback empty list. Error details:", {
+      message: error?.message,
+      code: error?.code,
+      details: error?.details,
+      hint: error?.hint,
+      stack: error?.stack,
+    });
     return NextResponse.json({ orders: [] }, { status: 200 });
   }
 }
