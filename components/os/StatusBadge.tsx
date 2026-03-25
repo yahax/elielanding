@@ -12,15 +12,23 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function StatusBadge({ status }: { status: string }) {
     const label = STATUS_LABELS[status] || status;
+    const tone =
+        status === 'confirmed' || status === 'delivered'
+            ? 'success'
+            : status === 'to_confirm' || status === 'callback' || status === 'shipped'
+              ? 'warning'
+              : status === 'canceled'
+                ? 'danger'
+                : 'premium';
+
     return (
         <span
-            className={`badge badge-${status}`}
+            className={`status-pill ${tone}`}
             title={label}
             style={{
                 padding: '4px 10px',
-                borderRadius: 8,
                 fontSize: 11,
-                fontWeight: 700,
+                fontWeight: 800,
                 letterSpacing: '0.02em',
                 textTransform: 'uppercase'
             }}

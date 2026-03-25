@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import toast from "react-hot-toast";
-import { fetchDomainEvents, fetchOrders, fetchOverview } from "@/lib/os/api";
+import { fetchDomainEvents, fetchOrders } from "@/lib/os/api";
 import { generateNotificationDraftsFromOrders, toRealtimeSnapshot } from "@/lib/os/live/mock";
 import type { RealtimeSnapshotEntry } from "@/lib/os/live/types";
 import { mapDomainEventToNotificationDraft } from "@/lib/os/realtime/mappers";
@@ -34,6 +34,7 @@ export function OsRealtimeBridge() {
   const toastCooldownRef = useRef<Map<string, number>>(new Map());
 
   const TOAST_COOLDOWN_MS = 60_000;
+  const POLLING_FLOOR_SEC = 30;
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -45,8 +46,12 @@ export function OsRealtimeBridge() {
 
   useEffect(() => {
     let timer: number | null = null;
+    let running = false;
 
     const run = async () => {
+      if (running) return;
+      running = true;
+
       try {
         setRealtimeStatus("polling", null);
         let drafts = [] as ReturnType<typeof generateNotificationDraftsFromOrders>;
@@ -74,17 +79,14 @@ export function OsRealtimeBridge() {
         }
 
         if (drafts.length === 0) {
-          const [ordersResponse, overviewResponse] = await Promise.all([
-            fetchOrders({ limit: 220, days: 7 }),
-            fetchOverview(7).catch(() => null),
-          ]);
+          const ordersResponse = await fetchOrders({ limit: 50, page: 1, days: 7 });
 
           if (!isMountedRef.current) return;
 
           drafts = generateNotificationDraftsFromOrders({
             orders: ordersResponse.orders,
             previousSnapshot: snapshotRef.current,
-            overview: overviewResponse,
+            overview: null,
             emittedKeys: emittedKeysRef.current,
           });
 
@@ -117,13 +119,15 @@ export function OsRealtimeBridge() {
         if (isMountedRef.current) {
           setRealtimeStatus("error", message);
         }
+      } finally {
+        running = false;
       }
     };
 
     void run();
     timer = window.setInterval(() => {
       void run();
-    }, Math.max(10, settings.refreshIntervalSec) * 1000);
+    }, Math.max(POLLING_FLOOR_SEC, settings.refreshIntervalSec) * 1000);
 
     return () => {
       if (timer != null) window.clearInterval(timer);

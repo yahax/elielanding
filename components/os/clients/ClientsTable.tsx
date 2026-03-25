@@ -20,8 +20,8 @@ function formatDate(iso: string | null): string {
 
 export function ClientsTable({ customers, onOpenCustomer }: ClientsTableProps) {
   return (
-    <div className="table-wrap">
-      <table className="data-table">
+    <div className="table-wrap os-table-shell os-clients-table-shell">
+      <table className="data-table os-clients-table">
         <thead>
           <tr>
             <th>Client</th>
@@ -39,7 +39,7 @@ export function ClientsTable({ customers, onOpenCustomer }: ClientsTableProps) {
         </thead>
         <tbody>
           {customers.map((customer) => (
-            <tr key={customer.id} onClick={() => onOpenCustomer(customer)} style={{ cursor: "pointer" }}>
+            <tr key={customer.id} className="os-table-row-interactive os-clients-row" onClick={() => onOpenCustomer(customer)} style={{ cursor: "pointer" }}>
               <td>
                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                   <span style={{ fontSize: 13, fontWeight: 900, color: "var(--text)" }}>{customer.name}</span>
@@ -51,10 +51,10 @@ export function ClientsTable({ customers, onOpenCustomer }: ClientsTableProps) {
               <td>{customer.totalSpent} MAD</td>
               <td>{formatDate(customer.lastOrderAt)}</td>
               <td>
-                <span className="badge" style={{ background: "var(--gold-glow)", color: "var(--gold)", border: "1px solid var(--gold-border)" }}>
-                  {CUSTOMER_SEGMENT_LABELS[getCustomerMainSegment(customer)]}
-                </span>
-              </td>
+                  <span className="os-chip is-active" style={{ minHeight: 24 }}>
+                    {CUSTOMER_SEGMENT_LABELS[getCustomerMainSegment(customer)]}
+                  </span>
+                </td>
               <td>{RELATIONSHIP_LABELS[customer.relationshipStatus]}</td>
               <td>
                 <CustomerValueBadge score={customer.valueScore} totalSpent={customer.totalSpent} />
@@ -64,7 +64,7 @@ export function ClientsTable({ customers, onOpenCustomer }: ClientsTableProps) {
               </td>
               <td>{NEXT_ACTION_LABELS[customer.nextAction]}</td>
               <td>
-                <ChevronRight size={14} style={{ color: "var(--text-dim)" }} />
+                <ChevronRight size={14} className="os-clients-row-chevron" style={{ color: "var(--text-dim)" }} />
               </td>
             </tr>
           ))}

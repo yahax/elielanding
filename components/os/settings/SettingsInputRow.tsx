@@ -9,6 +9,7 @@ interface SettingsInputRowProps {
   min?: number;
   max?: number;
   suffix?: string;
+  disabled?: boolean;
 }
 
 export function SettingsInputRow({
@@ -20,33 +21,25 @@ export function SettingsInputRow({
   min,
   max,
   suffix,
+  disabled = false,
 }: SettingsInputRowProps) {
   return (
-    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span style={{ fontSize: 10, fontWeight: 900, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</span>
-      <div style={{ position: "relative" }}>
+    <label className="os-settings-input-row">
+      <span className="os-settings-input-label">{label}</span>
+      <div className="os-settings-input-wrap">
         <input
-          className="filter-input"
+          className="filter-input os-settings-input"
           value={value}
           onChange={(event) => onChange(event.target.value)}
           type={type}
           placeholder={placeholder}
           min={min}
           max={max}
+          disabled={disabled}
           style={{ width: "100%", height: 42, borderRadius: 12, paddingRight: suffix ? 48 : 12 }}
         />
         {suffix ? (
-          <span
-            style={{
-              position: "absolute",
-              right: 12,
-              top: "50%",
-              transform: "translateY(-50%)",
-              fontSize: 11,
-              color: "var(--text-dim)",
-              fontWeight: 800,
-            }}
-          >
+          <span className="os-settings-input-suffix">
             {suffix}
           </span>
         ) : null}
@@ -54,4 +47,3 @@ export function SettingsInputRow({
     </label>
   );
 }
-

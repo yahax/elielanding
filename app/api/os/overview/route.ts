@@ -21,7 +21,28 @@ export async function GET(req: Request) {
     const overview = await fetchOverview(days);
     return NextResponse.json(overview, { status: 200 });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unable to load overview";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.warn("[API/OS] overview fallback empty payload:", error);
+    return NextResponse.json(
+      {
+        stats: {
+          total_orders: 0,
+          confirmed: 0,
+          delivered: 0,
+          canceled: 0,
+          revenue: 0,
+          orders_per_hour: [],
+          top_cities: [],
+          top_perfumes: [],
+          source_breakdown: {},
+        },
+        recentOrders: [],
+        todayRevenue: 0,
+        todayOrders: 0,
+        avgBasket: 0,
+        confirmationRate: 0,
+        lowStockAlerts: [],
+      },
+      { status: 200 }
+    );
   }
 }

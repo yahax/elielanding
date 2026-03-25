@@ -29,6 +29,7 @@ export interface CustomerOrderSummary {
   city: string | null;
   value: number;
   products: string[];
+  notes: string[];
   createdAt: string;
 }
 

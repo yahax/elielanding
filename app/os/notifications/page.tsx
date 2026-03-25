@@ -12,7 +12,7 @@ export default function NotificationsPage() {
   const [localInterval, setLocalInterval] = useState<number>(settings.refreshIntervalSec);
 
   return (
-    <div className="os-page" style={{ paddingBottom: 36 }}>
+    <div className="os-page os-notifications-page">
       <OsToaster />
       <PageHeader
         title="Notifications"
@@ -21,13 +21,13 @@ export default function NotificationsPage() {
 
       <NotificationCenter />
 
-      <section className="luxury-card os-surface-card" style={{ borderRadius: 18, padding: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 900, color: "var(--text)", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+      <section className="luxury-card os-surface-card os-notifications-preferences">
+        <div className="os-notifications-preferences-title">
           Préférences notifications
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700, color: "var(--text-muted)" }}>
+        <div className="os-notifications-preferences-grid">
+          <label className="os-notifications-checkbox-row">
             <input
               type="checkbox"
               checked={settings.toastsEnabled}
@@ -36,7 +36,7 @@ export default function NotificationsPage() {
             Toasts live activés
           </label>
 
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700, color: "var(--text-muted)" }}>
+          <label className="os-notifications-checkbox-row">
             <input
               type="checkbox"
               checked={settings.soundsEnabled}
@@ -45,30 +45,28 @@ export default function NotificationsPage() {
             Sons notifications
           </label>
 
-          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 800 }}>Fréquence polling (sec)</span>
+          <label className="os-notifications-input-row">
+            <span className="os-notifications-input-label">Fréquence polling (sec)</span>
             <input
-              className="filter-input"
+              className="filter-input os-notifications-input"
               type="number"
-              min={10}
-              max={120}
+              min={30}
+              max={300}
               value={localInterval}
-              onChange={(event) => setLocalInterval(Math.max(10, Number(event.target.value)))}
-              onBlur={() => updateSettings({ refreshIntervalSec: Math.max(10, localInterval) })}
-              style={{ height: 38 }}
+              onChange={(event) => setLocalInterval(Math.min(300, Math.max(30, Number(event.target.value) || 30)))}
+              onBlur={() => updateSettings({ refreshIntervalSec: Math.min(300, Math.max(30, localInterval)) })}
             />
           </label>
 
-          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 800 }}>Seuil SLA (min)</span>
+          <label className="os-notifications-input-row">
+            <span className="os-notifications-input-label">Seuil SLA (min)</span>
             <input
-              className="filter-input"
+              className="filter-input os-notifications-input"
               type="number"
               min={15}
               max={240}
               value={settings.slaWarningMinutes}
               onChange={(event) => updateSettings({ slaWarningMinutes: Math.max(15, Number(event.target.value)) })}
-              style={{ height: 38 }}
             />
           </label>
         </div>

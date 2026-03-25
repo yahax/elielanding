@@ -31,7 +31,7 @@ function getLabel(segment: SegmentTab): string {
 
 export function ClientSegmentTabs({ active, counts, onChange }: ClientSegmentTabsProps) {
   return (
-    <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+    <div className="os-segmented" style={{ overflowX: "auto", width: "fit-content", maxWidth: "100%" }}>
       {ORDERED_SEGMENTS.map((segment) => {
         const selected = active === segment;
         return (
@@ -39,32 +39,11 @@ export function ClientSegmentTabs({ active, counts, onChange }: ClientSegmentTab
             type="button"
             key={segment}
             onClick={() => onChange(segment)}
-            style={{
-              borderRadius: 999,
-              border: selected ? "1px solid var(--gold-border)" : "1px solid var(--border)",
-              background: selected ? "var(--gold-glow)" : "var(--surface)",
-              color: selected ? "var(--gold)" : "var(--text-dim)",
-              padding: "7px 11px",
-              fontSize: 12,
-              fontWeight: 900,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 7,
-              whiteSpace: "nowrap",
-              cursor: "pointer",
-            }}
+            className={`os-segmented-btn ${selected ? "is-active" : ""}`}
+            style={{ display: "inline-flex", alignItems: "center", gap: 7, whiteSpace: "nowrap" }}
           >
             <span>{getLabel(segment)}</span>
-            <span
-              style={{
-                borderRadius: 999,
-                padding: "1px 7px",
-                fontSize: 10,
-                background: selected ? "rgba(201, 168, 106, 0.18)" : "var(--bg-elevated)",
-                color: selected ? "var(--gold)" : "var(--text-dim)",
-                border: "1px solid var(--border)",
-              }}
-            >
+            <span className="os-chip-count">
               {counts[segment] ?? 0}
             </span>
           </button>
@@ -73,4 +52,3 @@ export function ClientSegmentTabs({ active, counts, onChange }: ClientSegmentTab
     </div>
   );
 }
-

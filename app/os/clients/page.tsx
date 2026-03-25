@@ -2,11 +2,11 @@
 
 import { Suspense } from "react";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { AlertTriangle, RotateCcw } from "lucide-react";
-import { fetchOrders } from "@/lib/os/api";
+import { addOrderNote as addOrderNoteRequest, fetchOrders } from "@/lib/os/api";
 import {
   CUSTOMER_SEGMENT_LABELS,
   RELATIONSHIP_LABELS,
@@ -83,7 +83,9 @@ function ClientsPageInner() {
   const [filters, setFilters] = useState<CustomerFiltersState>(DEFAULT_CUSTOMER_FILTERS);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [lastQuery, setLastQuery] = useState("");
+  const [noteTargetCustomerId, setNoteTargetCustomerId] = useState<string | null>(null);
+  const lastQueryRef = useRef("");
+  const deferredSearch = useDeferredValue(filters.search);
 
   const load = useCallback(async (withToast = false) => {
     if (customers.length === 0) setOrdersLoading(true);
@@ -91,7 +93,7 @@ function ClientsPageInner() {
 
     setError("");
     try {
-      const response = await fetchOrders({ limit: 1200, days: 365 });
+      const response = await fetchOrders({ limit: 300, days: 365 });
       setOrdersCount(response.orders.length);
       const computedCustomers = buildCustomersFromOrders(response.orders);
       setCustomers(computedCustomers);
@@ -112,7 +114,7 @@ function ClientsPageInner() {
 
   useEffect(() => {
     const query = searchParams.toString();
-    setLastQuery(query);
+    lastQueryRef.current = query;
     const parsed = parseClientsFiltersFromSearchParams(searchParams);
 
     setFilters((prev) => ({
@@ -136,13 +138,20 @@ function ClientsPageInner() {
       onlyAtRisk: filters.onlyAtRisk || undefined,
     });
     const query = href.includes("?") ? href.split("?")[1] ?? "" : "";
-    if (query === lastQuery) return;
-    setLastQuery(query);
+    if (query === lastQueryRef.current) return;
+    lastQueryRef.current = query;
     router.replace(href, { scroll: false });
-  }, [filters, lastQuery, router]);
+  }, [filters, router]);
 
+  const effectiveFilters = useMemo(
+    () => ({
+      ...filters,
+      search: deferredSearch,
+    }),
+    [deferredSearch, filters]
+  );
   const uniqueCities = useMemo(() => getUniqueCities(customers), [customers]);
-  const filteredCustomers = useMemo(() => filterCustomers(customers, filters), [customers, filters]);
+  const filteredCustomers = useMemo(() => filterCustomers(customers, effectiveFilters), [customers, effectiveFilters]);
   const kpis = useMemo(() => buildCustomerKpis(customers), [customers]);
   const clientInsights = useMemo(() => buildClientInsights(filteredCustomers).slice(0, 3), [filteredCustomers]);
 
@@ -177,8 +186,49 @@ function ClientsPageInner() {
 
   const activeSegment = filters.segment;
 
+  const addCustomerNote = useCallback(
+    async (customer: Customer, note: string) => {
+      const normalized = note.trim();
+      if (normalized.length === 0) return;
+
+      const targetOrderId = customer.orderHistory[0]?.id ?? customer.id;
+      if (!targetOrderId) {
+        toast.error("Aucune commande cible pour enregistrer la note");
+        return;
+      }
+
+      setNoteTargetCustomerId(customer.id);
+      const previous = customers;
+
+      setCustomers((prev) =>
+        prev.map((item) => {
+          if (item.id !== customer.id) return item;
+          return {
+            ...item,
+            orderHistory: item.orderHistory.map((order, index) =>
+              index === 0 ? { ...order, notes: [...order.notes, normalized] } : order
+            ),
+          };
+        })
+      );
+
+      try {
+        await addOrderNoteRequest(targetOrderId, normalized);
+        toast.success("Note client enregistrée");
+        await load(false);
+      } catch (error) {
+        setCustomers(previous);
+        const message = error instanceof Error ? error.message : "Erreur lors de l'ajout de la note client";
+        toast.error(message);
+      } finally {
+        setNoteTargetCustomerId(null);
+      }
+    },
+    [customers, load]
+  );
+
   return (
-    <div className="os-page animate-fade-in" style={{ paddingBottom: 96, gap: 12 }}>
+    <div className="os-page animate-fade-in os-clients-page" style={{ paddingBottom: 96, gap: 12 }}>
       <OsToaster />
 
       <ClientsCommandBar
@@ -203,7 +253,7 @@ function ClientsPageInner() {
       />
 
       <section
-        className="luxury-card"
+        className="luxury-card os-card-subtle os-clients-filters"
         style={{
           padding: 12,
           borderRadius: 16,
@@ -212,7 +262,7 @@ function ClientsPageInner() {
           gap: 8,
         }}
       >
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <label className="os-clients-filter-field" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <span style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 900 }}>Ville</span>
           <select
             className="filter-select"
@@ -229,7 +279,7 @@ function ClientsPageInner() {
           </select>
         </label>
 
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <label className="os-clients-filter-field" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <span style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 900 }}>Relation</span>
           <select
             className="filter-select"
@@ -246,7 +296,7 @@ function ClientsPageInner() {
           </select>
         </label>
 
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <label className="os-clients-filter-field" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <span style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 900 }}>Segment</span>
           <select
             className="filter-select"
@@ -263,7 +313,7 @@ function ClientsPageInner() {
           </select>
         </label>
 
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <label className="os-clients-filter-field" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <span style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 900 }}>Min dépense</span>
           <input
             className="filter-input"
@@ -278,7 +328,7 @@ function ClientsPageInner() {
 
         <button
           type="button"
-          className={filters.onlyAtRisk ? "btn btn-primary btn-sm" : "btn-ghost btn-sm"}
+          className={filters.onlyAtRisk ? "btn btn-primary btn-sm os-clients-filter-toggle" : "btn-ghost btn-sm os-clients-filter-toggle"}
           onClick={() => setFilters((prev) => ({ ...prev, onlyAtRisk: !prev.onlyAtRisk }))}
           style={{ alignSelf: "end", height: 40, borderRadius: 10 }}
         >
@@ -288,7 +338,7 @@ function ClientsPageInner() {
 
         <button
           type="button"
-          className="btn-ghost btn-sm"
+          className="btn-ghost btn-sm os-clients-filter-reset"
           onClick={() => setFilters(DEFAULT_CUSTOMER_FILTERS)}
           style={{ gridColumn: "auto", height: 40, borderRadius: 10 }}
         >
@@ -309,13 +359,13 @@ function ClientsPageInner() {
       />
 
       {clientInsights.length > 0 ? (
-        <section style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+        <section className="os-clients-insights" style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 8 }}>
           {clientInsights.map((insight) => (
-            <article key={insight.id} className="luxury-card" style={{ padding: 12, borderRadius: 14 }}>
+            <article key={insight.id} className="luxury-card os-card-subtle os-card-interactive os-clients-insight-card" style={{ padding: 12, borderRadius: 14 }}>
               <div style={{ fontSize: 12, fontWeight: 900, color: "var(--text)" }}>{insight.title}</div>
               <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--text-dim)", fontWeight: 700, lineHeight: 1.5 }}>{insight.message}</p>
               <div style={{ marginTop: 8 }}>
-                <a href={insight.href} className="btn-ghost btn-sm" style={{ textDecoration: "none" }}>
+                <a href={insight.href} className="btn-ghost btn-sm os-clients-insight-cta" style={{ textDecoration: "none" }}>
                   {insight.actionLabel}
                 </a>
               </div>
@@ -360,9 +410,15 @@ function ClientsPageInner() {
         )}
       </DataStateWrapper>
 
-      <ClientDetailDrawer open={drawerOpen} customer={selectedCustomer} onClose={() => setDrawerOpen(false)} />
+      <ClientDetailDrawer
+        open={drawerOpen}
+        customer={selectedCustomer}
+        onClose={() => setDrawerOpen(false)}
+        onAddNote={addCustomerNote}
+        noteMutationPending={selectedCustomer != null && noteTargetCustomerId === selectedCustomer.id}
+      />
 
-      <div style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 700, textAlign: "right", marginTop: 2 }}>
+      <div className="os-clients-footnote" style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 700, textAlign: "right", marginTop: 2 }}>
         {ordersCount} commandes agrégées pour générer ce CRM.
       </div>
     </div>
@@ -371,7 +427,7 @@ function ClientsPageInner() {
 
 export default function ClientsPage() {
   return (
-    <Suspense fallback={<div className="os-page" style={{ padding: 32, textAlign: "center", color: "var(--text-dim)" }}>Chargement CRM clients...</div>}>
+    <Suspense fallback={<div className="os-page os-suspense-state" style={{ padding: 32, textAlign: "center", color: "var(--text-dim)" }}>Chargement CRM clients...</div>}>
       <ClientsPageInner />
     </Suspense>
   );

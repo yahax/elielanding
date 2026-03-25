@@ -3,43 +3,13 @@
 import type { PipelineHealth } from "@/lib/os/orders/types";
 import { AlertTriangle, Gauge, Layers, TrendingUp, Zap } from "lucide-react";
 import { STATUS_LABELS } from "@/lib/types";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 interface HealthPill {
   label: string;
   value: string | number;
   icon: ReactNode;
   tone: "neutral" | "danger" | "warning" | "success";
-}
-
-function toneStyles(tone: HealthPill["tone"]): CSSProperties {
-  switch (tone) {
-    case "danger":
-      return {
-        border: "1px solid rgba(201, 106, 106, 0.3)",
-        background: "var(--danger-soft)",
-        color: "var(--danger)",
-      };
-    case "warning":
-      return {
-        border: "1px solid rgba(213, 161, 62, 0.3)",
-        background: "var(--warning-soft)",
-        color: "var(--warning)",
-      };
-    case "success":
-      return {
-        border: "1px solid rgba(47, 143, 99, 0.3)",
-        background: "var(--success-soft)",
-        color: "var(--success)",
-      };
-    case "neutral":
-    default:
-      return {
-        border: "1px solid var(--border)",
-        background: "var(--surface)",
-        color: "var(--text)",
-      };
-  }
 }
 
 export function PipelineHealthHeader({
@@ -63,36 +33,28 @@ export function PipelineHealthHeader({
   ];
 
   return (
-    <div className="luxury-card" style={{ borderRadius: 20, padding: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 10 }}>
+    <div className="luxury-card os-card-subtle os-pipeline-health">
+      <div className="os-pipeline-health-head">
         <div>
-          <div style={{ fontSize: 12, fontWeight: 900, color: "var(--text)", textTransform: "uppercase", letterSpacing: "0.09em" }}>Pipeline Health</div>
-          <div style={{ marginTop: 2, fontSize: 12, color: "var(--text-muted)", fontWeight: 700 }}>Lecture instantanée des blocages et urgences</div>
+          <div className="os-pipeline-health-title">Pipeline Health</div>
+          <div className="os-pipeline-health-sub">Lecture instantanée des blocages et urgences</div>
         </div>
-        <button type="button" className="btn btn-primary btn-sm" onClick={onShowUrgent}>
+        <button type="button" className="btn btn-primary btn-sm os-pipeline-health-cta" onClick={onShowUrgent}>
           Voir urgentes
         </button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
+      <div className="os-kpi-grid">
         {pills.map((pill) => (
           <div
             key={pill.label}
-            style={{
-              borderRadius: 12,
-              padding: "10px 12px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 8,
-              ...toneStyles(pill.tone),
-            }}
+            className={`os-kpi-card os-kpi-tone-${pill.tone} os-pipeline-health-pill`}
           >
             <div>
-              <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>{pill.label}</div>
-              <div style={{ marginTop: 4, fontSize: 15, fontWeight: 900, color: "var(--text)" }}>{pill.value}</div>
+              <div className="os-kpi-head">{pill.label}</div>
+              <div className="os-kpi-value os-pipeline-health-value">{pill.value}</div>
             </div>
-            <div style={{ opacity: 0.8 }}>{pill.icon}</div>
+            <div className="os-pipeline-health-icon">{pill.icon}</div>
           </div>
         ))}
       </div>

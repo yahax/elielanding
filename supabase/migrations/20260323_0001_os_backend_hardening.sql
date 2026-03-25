@@ -246,7 +246,7 @@ create index if not exists idx_os_notifications_entity_created
 
 create table if not exists public.os_inventory_adjustments (
   id uuid primary key default gen_random_uuid(),
-  perfume_id uuid,
+  perfume_id text,
   product_name text,
   delta integer not null,
   previous_stock integer,

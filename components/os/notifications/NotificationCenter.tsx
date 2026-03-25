@@ -42,22 +42,22 @@ export function NotificationCenter({ compact = false }: { compact?: boolean }) {
   }, [activeCategory, notifications, onlyUnread]);
 
   return (
-    <section className="luxury-card os-surface-card" style={{ padding: compact ? 14 : 18, borderRadius: 18 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+    <section className={`luxury-card os-surface-card os-notification-center ${compact ? "is-compact" : ""}`}>
+      <div className="os-notification-center-head">
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Bell size={15} style={{ color: "var(--gold)" }} />
-            <h2 style={{ margin: 0, fontSize: compact ? 16 : 18, fontWeight: 900, color: "var(--text)" }}>Centre Notifications</h2>
+          <div className="os-notification-center-title-row">
+            <Bell size={15} className="os-notification-center-icon" />
+            <h2 className="os-notification-center-title">Centre Notifications</h2>
           </div>
-          <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="os-notification-center-meta">
             <LiveStatusDot status={realtimeStatus} compact />
-            <span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 700 }}>
+            <span className="os-notification-center-sync">
               {lastSyncAt ? `Sync: ${new Date(lastSyncAt).toLocaleTimeString("fr-MA", { hour: "2-digit", minute: "2-digit" })}` : "En attente de sync"}
             </span>
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div className="os-notification-center-actions">
           <button type="button" className={onlyUnread ? "btn btn-primary btn-sm" : "btn-ghost btn-sm"} onClick={() => setOnlyUnread((prev) => !prev)} aria-pressed={onlyUnread}>
             Non lues
           </button>
@@ -74,13 +74,13 @@ export function NotificationCenter({ compact = false }: { compact?: boolean }) {
 
       <NotificationCategoryTabs active={activeCategory} onChange={setActiveCategory} counts={counts} />
 
-      <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: compact ? "1fr" : "1.4fr .9fr", gap: 12 }}>
+      <div className="os-notification-center-grid" style={{ gridTemplateColumns: compact ? "1fr" : "1.4fr .9fr" }}>
         <NotificationList items={filtered} onRead={markNotificationRead} />
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ fontSize: 12, fontWeight: 900, color: "var(--text)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Flux temps réel</div>
+        <div className="os-notification-feed">
+          <div className="os-notification-feed-title">Flux temps réel</div>
           {latestEvents.length === 0 ? (
-            <div style={{ border: "1px dashed var(--border)", borderRadius: 12, padding: 16, color: "var(--text-dim)", fontSize: 12, fontWeight: 700 }}>
+            <div className="os-notification-feed-empty">
               Aucun événement live pour le moment.
             </div>
           ) : (

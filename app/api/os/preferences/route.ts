@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { resolveActorFromRequest } from "@/lib/os/server/actor";
 import { getUserPreferences, saveUserPreferences } from "@/lib/os/preferences/repository";
+import { createDefaultUserPreferences } from "@/lib/os/preferences/defaults";
 import { executeIdempotentJsonMutation } from "@/lib/os/server/idempotency";
 import { mapApiError, toApiErrorResponse } from "@/lib/os/orders/server/http";
 import { logAuditEntry } from "@/lib/os/audit/logger";
@@ -31,7 +32,7 @@ const patchSchema = z
       .object({
         toastsEnabled: z.boolean().optional(),
         soundsEnabled: z.boolean().optional(),
-        refreshIntervalSec: z.number().int().min(5).max(300).optional(),
+        refreshIntervalSec: z.number().int().min(30).max(300).optional(),
         slaWarningMinutes: z.number().int().min(10).max(480).optional(),
         categoriesEnabled: z
           .object({
@@ -91,7 +92,12 @@ export async function GET(req: Request) {
     const preferences = await getUserPreferences(userId);
     return NextResponse.json({ preferences }, { status: 200 });
   } catch (error) {
-    return toApiErrorResponse(error, "Unable to load preferences");
+    console.warn("[API/OS] preferences fallback defaults:", error);
+    const userId = await resolveUserId(req).catch(() => "operator:default");
+    return NextResponse.json(
+      { preferences: createDefaultUserPreferences(userId) },
+      { status: 200 }
+    );
   }
 }
 

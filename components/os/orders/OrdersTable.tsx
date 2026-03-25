@@ -9,7 +9,7 @@ import { RiskScoreBadge } from "@/components/os/orders/RiskScoreBadge";
 import { SlaTimer } from "@/components/os/orders/SlaTimer";
 import { StatusBadge } from "@/components/os/StatusBadge";
 import { ArrowDown, ArrowUp, Check, Copy, MessageCircle, Phone, RotateCcw, Ship, XCircle } from "lucide-react";
-import type { CSSProperties } from "react";
+import { memo, type CSSProperties } from "react";
 
 export type RowAction = "confirm" | "callback" | "shipped" | "cancel" | "whatsapp" | "call" | "details" | "copy_phone";
 
@@ -30,7 +30,7 @@ function SortLabel({
   );
 }
 
-export function OrdersTable({
+export const OrdersTable = memo(function OrdersTable({
   orders,
   selectedIds,
   allSelected,
@@ -55,7 +55,7 @@ export function OrdersTable({
 }) {
   if (orders.length === 0) {
     return (
-      <div className="luxury-card" style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}>
+      <div className="luxury-card os-empty-state os-table-empty" style={{ padding: 32, textAlign: "center" }}>
         Aucune commande ne correspond aux filtres actifs.
       </div>
     );
@@ -74,7 +74,7 @@ export function OrdersTable({
   };
 
   return (
-    <div className="table-wrap" style={{ overflowX: "auto", borderRadius: 20 }}>
+    <div className="table-wrap os-table-shell os-orders-table-shell" style={{ overflowX: "auto", borderRadius: 20 }}>
       <table className="data-table" style={{ minWidth: 1420 }}>
         <thead>
           <tr>
@@ -82,7 +82,7 @@ export function OrdersTable({
               <input type="checkbox" checked={allSelected} onChange={onToggleSelectAll} aria-label="Sélectionner tout" />
             </th>
             <th>
-              <button type="button" style={sortButtonStyle} onClick={() => onSortChange("created_at")}>
+              <button type="button" className="os-table-sort-btn" style={sortButtonStyle} onClick={() => onSortChange("created_at")}>
                 <SortLabel label="Commande" active={sortField === "created_at"} direction={sortDirection} />
               </button>
             </th>
@@ -90,24 +90,24 @@ export function OrdersTable({
             <th>Ville</th>
             <th>Pack / Produits</th>
             <th>
-              <button type="button" style={sortButtonStyle} onClick={() => onSortChange("value")}>
+              <button type="button" className="os-table-sort-btn" style={sortButtonStyle} onClick={() => onSortChange("value")}>
                 <SortLabel label="Valeur" active={sortField === "value"} direction={sortDirection} />
               </button>
             </th>
             <th>Statut</th>
             <th>
-              <button type="button" style={sortButtonStyle} onClick={() => onSortChange("priority")}>
+              <button type="button" className="os-table-sort-btn" style={sortButtonStyle} onClick={() => onSortChange("priority")}>
                 <SortLabel label="Priorité" active={sortField === "priority"} direction={sortDirection} />
               </button>
             </th>
             <th>
-              <button type="button" style={sortButtonStyle} onClick={() => onSortChange("risk")}>
+              <button type="button" className="os-table-sort-btn" style={sortButtonStyle} onClick={() => onSortChange("risk")}>
                 <SortLabel label="Risque" active={sortField === "risk"} direction={sortDirection} />
               </button>
             </th>
             <th>Opérateur</th>
             <th>
-              <button type="button" style={sortButtonStyle} onClick={() => onSortChange("elapsed")}>
+              <button type="button" className="os-table-sort-btn" style={sortButtonStyle} onClick={() => onSortChange("elapsed")}>
                 <SortLabel label="Temps écoulé" active={sortField === "elapsed"} direction={sortDirection} />
               </button>
             </th>
@@ -120,7 +120,12 @@ export function OrdersTable({
           {orders.map((order) => {
             const updating = isOrderUpdating(order.id);
             return (
-              <tr key={order.id} style={{ opacity: updating ? 0.6 : 1 }}>
+              <tr
+                key={order.id}
+                className={`os-table-row-interactive${updating ? " is-updating" : ""}`}
+                style={{ opacity: updating ? 0.6 : 1 }}
+                aria-busy={updating}
+              >
                 <td>
                   <input type="checkbox" checked={selectedIds.has(order.id)} onChange={() => onToggleSelect(order.id)} aria-label={`Sélectionner commande ${order.id}`} />
                 </td>
@@ -133,7 +138,7 @@ export function OrdersTable({
                 </td>
                 <td>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <span style={{ fontWeight: 800, color: "var(--text)", fontSize: 13 }}>{order.customer_name || "Client inconnu"}</span>
+                    <span style={{ fontWeight: 820, color: "var(--text)", fontSize: 13 }}>{order.customer_name || "Client inconnu"}</span>
                     <span style={{ color: "var(--text-muted)", fontSize: 12, fontWeight: 700 }}>{order.phone || "Téléphone indisponible"}</span>
                     <OrderRowBadges order={order} max={2} />
                   </div>
@@ -143,19 +148,7 @@ export function OrdersTable({
                 </td>
                 <td>
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 900,
-                        color: "var(--gold)",
-                        background: "var(--gold-glow)",
-                        border: "1px solid var(--gold-border)",
-                        borderRadius: 999,
-                        width: "fit-content",
-                        padding: "2px 8px",
-                        textTransform: "uppercase",
-                      }}
-                    >
+                    <span className="os-chip is-active" style={{ width: "fit-content", minHeight: 22, padding: "0 8px" }}>
                       Pack {order.pack_type}
                     </span>
                     <span style={{ maxWidth: 220, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "var(--text-muted)", fontSize: 12 }}>
@@ -174,7 +167,7 @@ export function OrdersTable({
                   <RiskScoreBadge risk={order.risk} score={order.riskScore} />
                 </td>
                 <td>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)" }}>{order.operator || "Non assigné"}</span>
+                  <span className="os-data-inline">{order.operator || "Non assigné"}</span>
                 </td>
                 <td>
                   <SlaTimer elapsedMinutes={order.elapsedMinutes} slaMinutes={order.slaMinutes} level={order.slaLevel} />
@@ -184,28 +177,28 @@ export function OrdersTable({
                 </td>
                 <td style={{ paddingRight: 16 }}>
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
-                    <button type="button" className="btn-ghost btn-sm" style={{ padding: 0, width: 34, height: 34 }} onClick={() => onAction(order, "confirm")} title="Confirmer">
+                    <button type="button" className="btn-ghost btn-sm os-table-action" onClick={() => onAction(order, "confirm")} title="Confirmer">
                       <Check size={15} />
                     </button>
-                    <button type="button" className="btn-ghost btn-sm" style={{ padding: 0, width: 34, height: 34 }} onClick={() => onAction(order, "callback")} title="Callback">
+                    <button type="button" className="btn-ghost btn-sm os-table-action" onClick={() => onAction(order, "callback")} title="Callback">
                       <RotateCcw size={15} />
                     </button>
-                    <button type="button" className="btn-ghost btn-sm" style={{ padding: 0, width: 34, height: 34 }} onClick={() => onAction(order, "shipped")} title="Expédiée">
+                    <button type="button" className="btn-ghost btn-sm os-table-action" onClick={() => onAction(order, "shipped")} title="Expédiée">
                       <Ship size={15} />
                     </button>
-                    <button type="button" className="btn-ghost btn-sm" style={{ padding: 0, width: 34, height: 34 }} onClick={() => onAction(order, "cancel")} title="Annuler">
+                    <button type="button" className="btn-ghost btn-sm os-table-action" onClick={() => onAction(order, "cancel")} title="Annuler">
                       <XCircle size={15} />
                     </button>
-                    <button type="button" className="btn-ghost btn-sm" style={{ padding: 0, width: 34, height: 34 }} onClick={() => onAction(order, "whatsapp")} title="WhatsApp">
+                    <button type="button" className="btn-ghost btn-sm os-table-action" onClick={() => onAction(order, "whatsapp")} title="WhatsApp">
                       <MessageCircle size={15} />
                     </button>
-                    <button type="button" className="btn-ghost btn-sm" style={{ padding: 0, width: 34, height: 34 }} onClick={() => onAction(order, "call")} title="Appeler">
+                    <button type="button" className="btn-ghost btn-sm os-table-action" onClick={() => onAction(order, "call")} title="Appeler">
                       <Phone size={15} />
                     </button>
-                    <button type="button" className="btn-ghost btn-sm" style={{ padding: 0, width: 34, height: 34 }} onClick={() => onAction(order, "copy_phone")} title="Copier téléphone">
+                    <button type="button" className="btn-ghost btn-sm os-table-action" onClick={() => onAction(order, "copy_phone")} title="Copier téléphone">
                       <Copy size={15} />
                     </button>
-                    <button type="button" className="btn btn-primary btn-sm" style={{ height: 34 }} onClick={() => onAction(order, "details")} title="Détails">
+                    <button type="button" className="btn btn-primary btn-sm os-table-open" onClick={() => onAction(order, "details")} title="Détails">
                       Ouvrir
                     </button>
                   </div>
@@ -217,4 +210,4 @@ export function OrdersTable({
       </table>
     </div>
   );
-}
+});

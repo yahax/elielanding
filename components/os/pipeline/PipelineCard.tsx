@@ -30,58 +30,53 @@ export function PipelineCard({
       {...attributes}
       {...listeners}
       onClick={() => onOpenDetails(order)}
+      className={`os-pipeline-card ${isOverlay ? "is-overlay" : ""}`}
       style={{
         textAlign: "left",
-        borderRadius: 14,
-        border: "1px solid var(--border)",
-        background: "var(--surface)",
-        padding: 10,
-        cursor: isOverlay ? "grabbing" : "grab",
         transition,
         transform: CSS.Transform.toString(transform),
         opacity: isDragging ? 0.45 : 1,
-        boxShadow: isOverlay ? "0 16px 24px rgba(30,26,23,0.2)" : "none",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 10, color: "var(--text-dim)", fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+      <div className="os-pipeline-card-head">
+        <div className="os-pipeline-card-ident">
+          <div className="os-pipeline-card-order-id">
             #{order.id.slice(-6).toUpperCase()}
           </div>
-          <div style={{ marginTop: 2, fontSize: 13, fontWeight: 900, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div className="os-pipeline-card-customer">
             {order.customer_name || "Client inconnu"}
           </div>
         </div>
-        <MoreHorizontal size={14} style={{ color: "var(--text-dim)" }} />
+        <MoreHorizontal size={14} className="os-pipeline-card-more" />
       </div>
 
-      <div style={{ marginTop: 7, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--text-muted)", fontSize: 11, fontWeight: 700 }}>
+      <div className="os-pipeline-card-row">
+        <span className="os-pipeline-card-city">
           <MapPin size={12} />
           {order.city || "-"}
         </span>
-        <span style={{ fontSize: 13, fontWeight: 900, color: "var(--text)" }}>{formatCurrencyMAD(order.estimatedValue)}</span>
+        <span className="os-pipeline-card-value">{formatCurrencyMAD(order.estimatedValue)}</span>
       </div>
 
-      <div style={{ marginTop: 7, display: "flex", flexWrap: "wrap", gap: 6 }}>
+      <div className="os-pipeline-card-badges">
         <StatusBadge status={order.status} />
         <PriorityScoreBadge priority={order.priority} score={order.priorityScore} compact />
         <RiskScoreBadge risk={order.risk} score={order.riskScore} compact />
       </div>
 
-      <div style={{ marginTop: 7 }}>
+      <div className="os-pipeline-card-sla">
         <SlaTimer elapsedMinutes={order.elapsedMinutes} slaMinutes={order.slaMinutes} level={order.slaLevel} compact />
       </div>
 
-      <div style={{ marginTop: 7 }}>
+      <div className="os-pipeline-card-flags">
         <OrderRowBadges order={order} max={2} />
       </div>
 
-      <div style={{ marginTop: 7 }}>
+      <div className="os-pipeline-card-next">
         <NextBestActionChip action={order.nextBestAction} compact />
       </div>
 
-      <div style={{ marginTop: 6, fontSize: 10, color: "var(--text-dim)", fontWeight: 700 }}>{formatDateTime(order.created_at)} · {order.source}</div>
+      <div className="os-pipeline-card-foot">{formatDateTime(order.created_at)} · {order.source}</div>
     </button>
   );
 }

@@ -169,6 +169,30 @@ function computeNextAction(input: {
   return "wait_and_monitor";
 }
 
+function parseOrderNotes(order: NormalizedOrder): string[] {
+  const notes = new Set<string>();
+
+  const inlineNote = typeof order.notes === "string" ? order.notes.trim() : "";
+  if (inlineNote.length > 0) {
+    notes.add(inlineNote);
+  }
+
+  const rawMeta = order.meta;
+  if (rawMeta && typeof rawMeta === "object") {
+    const rawOs = "os" in rawMeta ? (rawMeta.os as Record<string, unknown>) : null;
+    if (rawOs && typeof rawOs === "object" && Array.isArray(rawOs.notes)) {
+      for (const note of rawOs.notes) {
+        const normalized = String(note ?? "").trim();
+        if (normalized.length > 0) {
+          notes.add(normalized);
+        }
+      }
+    }
+  }
+
+  return Array.from(notes);
+}
+
 function toOrderSummary(order: NormalizedOrder): CustomerOrderSummary {
   return {
     id: order.id,
@@ -177,6 +201,7 @@ function toOrderSummary(order: NormalizedOrder): CustomerOrderSummary {
     city: order.city,
     value: getOrderValue(order),
     products: normalizeOrderPerfumes(order),
+    notes: parseOrderNotes(order),
     createdAt: order.created_at,
   };
 }

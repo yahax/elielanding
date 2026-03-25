@@ -7,20 +7,41 @@ interface SettingsSectionProps {
   title: string;
   description: string;
   icon?: LucideIcon;
+  badgeLabel?: string;
+  badgeTone?: "neutral" | "success" | "warning";
   children: ReactNode;
 }
 
-export function SettingsSection({ title, description, icon: Icon, children }: SettingsSectionProps) {
+export function SettingsSection({
+  title,
+  description,
+  icon: Icon,
+  badgeLabel,
+  badgeTone = "neutral",
+  children,
+}: SettingsSectionProps) {
+  const badgeToneClass =
+    badgeTone === "success"
+      ? "is-success"
+      : badgeTone === "warning"
+        ? "is-warning"
+        : "is-neutral";
+
   return (
-    <section className="luxury-card" style={{ padding: 16, borderRadius: 18 }}>
-      <div style={{ marginBottom: 12, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+    <section className="luxury-card os-settings-section">
+      <div className="os-settings-section-head">
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {Icon ? <Icon size={15} style={{ color: "var(--gold)" }} /> : null}
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 900, color: "var(--text)" }}>{title}</h3>
+          <div className="os-settings-section-title-row">
+            {Icon ? <Icon size={15} className="os-settings-section-icon" /> : null}
+            <h3 className="os-settings-section-title">{title}</h3>
           </div>
-          <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--text-dim)", fontWeight: 700 }}>{description}</p>
+          <p className="os-settings-section-description">{description}</p>
         </div>
+        {badgeLabel ? (
+          <span className={`os-settings-section-badge ${badgeToneClass}`}>
+            {badgeLabel}
+          </span>
+        ) : null}
       </div>
       {children}
     </section>

@@ -12,26 +12,14 @@ export function NotificationList({
 }) {
   if (items.length === 0) {
     return (
-      <div
-        className="os-empty-inline"
-        style={{
-          border: "1px dashed var(--border)",
-          borderRadius: 14,
-          padding: "28px 16px",
-          textAlign: "center",
-          fontSize: 13,
-          color: "var(--text-dim)",
-          fontWeight: 700,
-          background: "var(--surface)",
-        }}
-      >
+      <div className="os-empty-inline os-notification-empty">
         Aucune notification dans cette catégorie.
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className="os-notification-list">
       {items.map((item) => (
         <NotificationItem key={item.id} item={item} onRead={onRead} />
       ))}

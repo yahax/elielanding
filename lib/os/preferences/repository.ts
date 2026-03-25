@@ -26,22 +26,32 @@ function uniqueStrings(values: string[]): string[] {
   return Array.from(new Set(values.map((value) => value.trim()).filter((value) => value.length > 0)));
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
 function mergePreferences(base: UserPreferences, patch: UserPreferencesPatch): UserPreferences {
   const nextReadIds = patch.metadata?.notificationReadIds;
   const currentReadIds = Array.isArray(base.metadata.notificationReadIds)
     ? (base.metadata.notificationReadIds as string[])
     : [];
 
+  const mergedNotifications = {
+    ...base.notifications,
+    ...(patch.notifications ?? {}),
+    categoriesEnabled: {
+      ...base.notifications.categoriesEnabled,
+      ...(patch.notifications?.categoriesEnabled ?? {}),
+    },
+  };
+
   return {
     ...base,
     ...patch,
     notifications: {
-      ...base.notifications,
-      ...(patch.notifications ?? {}),
-      categoriesEnabled: {
-        ...base.notifications.categoriesEnabled,
-        ...(patch.notifications?.categoriesEnabled ?? {}),
-      },
+      ...mergedNotifications,
+      refreshIntervalSec: clamp(Number(mergedNotifications.refreshIntervalSec ?? 30), 30, 300),
+      slaWarningMinutes: clamp(Number(mergedNotifications.slaWarningMinutes ?? 40), 10, 480),
     },
     dashboard: {
       ...base.dashboard,

@@ -1,5 +1,6 @@
 "use client";
 
+import { normalizeOrderStatus } from "@/lib/types";
 import type { OrderStatus } from "@/lib/types";
 import type {
   CatalogProduct,
@@ -17,6 +18,37 @@ import type {
 } from "@/lib/os/domain/types";
 
 type RequestInitWithNoStore = RequestInit & { noStore?: boolean };
+
+function normalizeOrdersPayload(orders: NormalizedOrder[] | null | undefined): NormalizedOrder[] {
+  if (!Array.isArray(orders)) return [];
+
+  return orders
+    .map((order) => {
+      const id = typeof order?.id === "string" ? order.id : "";
+      if (!id) return null;
+
+      const createdAt = typeof order.created_at === "string" ? order.created_at : new Date().toISOString();
+      const totalPrice = Number(order.price_mad ?? order.total_price ?? 0);
+      const safeTotal = Number.isFinite(totalPrice) ? totalPrice : 0;
+
+      return {
+        ...order,
+        id,
+        created_at: createdAt,
+        updated_at: typeof order.updated_at === "string" ? order.updated_at : createdAt,
+        status: normalizeOrderStatus(order.status),
+        selected_perfumes: Array.isArray(order.selected_perfumes)
+          ? order.selected_perfumes.map((item) => String(item).trim()).filter(Boolean)
+          : [],
+        gift_perfume: typeof order.gift_perfume === "string" && order.gift_perfume.trim().length > 0
+          ? order.gift_perfume.trim()
+          : null,
+        total_price: safeTotal,
+        price_mad: safeTotal,
+      } as NormalizedOrder;
+    })
+    .filter((order): order is NormalizedOrder => order != null);
+}
 
 function hashFnv1a(value: string): string {
   let hash = 0x811c9dc5;
@@ -109,22 +141,103 @@ export interface FetchOrdersParams {
   pack?: string;
   search?: string;
   limit?: number;
+  page?: number;
   pipeline?: boolean;
   days?: number;
 }
 
-export async function fetchOrders(params: FetchOrdersParams = {}) {
-  const searchParams = new URLSearchParams();
-  if (params.status) searchParams.set("status", params.status);
-  if (params.source) searchParams.set("source", params.source);
-  if (params.pack) searchParams.set("pack", params.pack);
-  if (params.search) searchParams.set("search", params.search);
-  if (params.limit) searchParams.set("limit", String(params.limit));
-  if (params.pipeline) searchParams.set("pipeline", "1");
-  if (params.days) searchParams.set("days", String(params.days));
+export interface FetchOrdersResponse {
+  orders: NormalizedOrder[];
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
 
-  const suffix = searchParams.toString() ? `?${searchParams.toString()}` : "";
-  return osFetch<{ orders: NormalizedOrder[] }>(`/api/os/orders${suffix}`, { noStore: true });
+type OrdersApiResponse = {
+  orders?: NormalizedOrder[] | null;
+  page?: number;
+  pageSize?: number;
+  hasMore?: boolean;
+};
+
+function toPositiveInt(value: number | undefined, fallback: number): number {
+  if (!Number.isFinite(value)) return fallback;
+  const intValue = Math.floor(Number(value));
+  return intValue > 0 ? intValue : fallback;
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+export async function fetchOrders(params: FetchOrdersParams = {}): Promise<FetchOrdersResponse> {
+  const requestedLimit = toPositiveInt(params.limit, 50);
+  const cappedLimit = Math.min(requestedLimit, 300);
+  const pageSize = Math.min(50, cappedLimit);
+  const requestedPage = params.page != null ? toPositiveInt(params.page, 1) : undefined;
+
+  const buildQuery = (page: number, limit: number) => {
+    const searchParams = new URLSearchParams();
+    if (params.status) searchParams.set("status", params.status);
+    if (params.source) searchParams.set("source", params.source);
+    if (params.pack) searchParams.set("pack", params.pack);
+    if (params.search) searchParams.set("search", params.search);
+    if (params.pipeline) searchParams.set("pipeline", "1");
+    if (params.days) searchParams.set("days", String(params.days));
+    searchParams.set("limit", String(limit));
+    searchParams.set("page", String(page));
+    return searchParams.toString() ? `?${searchParams.toString()}` : "";
+  };
+
+  const fetchPage = async (page: number, limit: number): Promise<FetchOrdersResponse> => {
+    const suffix = buildQuery(page, limit);
+    const response = await osFetch<OrdersApiResponse>(`/api/os/orders${suffix}`, { noStore: true });
+    const normalized = normalizeOrdersPayload(response.orders ?? []);
+    const responsePage = isFiniteNumber(response.page) ? toPositiveInt(response.page, page) : page;
+    const responsePageSize = isFiniteNumber(response.pageSize) ? Math.min(50, toPositiveInt(response.pageSize, limit)) : limit;
+    const responseHasMore = Boolean(response.hasMore);
+    return {
+      orders: normalized,
+      page: responsePage,
+      pageSize: responsePageSize,
+      hasMore: responseHasMore,
+    };
+  };
+
+  try {
+    if (requestedPage != null || cappedLimit <= 50) {
+      return await fetchPage(requestedPage ?? 1, pageSize);
+    }
+
+    const aggregate: NormalizedOrder[] = [];
+    let page = 1;
+    let hasMore = true;
+    const maxPages = Math.min(12, Math.ceil(cappedLimit / 50) + 1);
+
+    while (hasMore && aggregate.length < cappedLimit && page <= maxPages) {
+      const pageLimit = Math.min(50, cappedLimit - aggregate.length);
+      const response = await fetchPage(page, pageLimit);
+      aggregate.push(...response.orders);
+      hasMore = response.hasMore;
+      page += 1;
+      if (response.orders.length === 0) break;
+    }
+
+    return {
+      orders: aggregate.slice(0, cappedLimit),
+      page: 1,
+      pageSize,
+      hasMore,
+    };
+  } catch (error) {
+    console.warn("[OS/API] fetchOrders fallback empty list:", error);
+    return {
+      orders: [],
+      page: requestedPage ?? 1,
+      pageSize,
+      hasMore: false,
+    };
+  }
 }
 
 export async function updateOrderStatus(orderId: string, newStatus: OrderStatus) {

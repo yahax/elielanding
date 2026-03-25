@@ -12,6 +12,8 @@ export type OrderStatus =
     | 'canceled'
     | 'callback';
 
+export type OrderStatusInput = OrderStatus | 'pending' | 'cancelled';
+
 export type OrderSource = 'whatsapp' | 'direct' | 'meta_ads' | 'organic' | 'other' | 'landing_page' | string;
 export type PackType = 'homme' | 'femme' | 'mixte';
 
@@ -71,8 +73,6 @@ export interface Order {
     gift_perfume?: string | null;
     offer_mode?: string | null;
     meta?: Record<string, unknown> | null;
-    // Joined data (Deprecated - order_items table does not exist)
-    items?: any[];
 }
 
 // ── Order Item (DEPRECATED - Table missing in prod) ──────────
@@ -94,7 +94,7 @@ export interface BusinessEvent {
     type: string;
     entity_type: string;
     entity_id: string;
-    payload: any;
+    payload: unknown;
     created_at: string;
 }
 
@@ -111,14 +111,50 @@ export interface DashboardStats {
     source_breakdown: Record<string, number>;
 }
 
+export const PUBLIC_ORDER_STATUS_LIST = [
+    'new',
+    'pending',
+    'confirmed',
+    'callback',
+    'cancelled',
+] as const;
+
+const STATUS_ALIAS_TO_CANONICAL: Record<string, OrderStatus> = {
+    new: 'new',
+    pending: 'to_confirm',
+    to_confirm: 'to_confirm',
+    confirmed: 'confirmed',
+    callback: 'callback',
+    cancelled: 'canceled',
+    canceled: 'canceled',
+    shipped: 'shipped',
+    delivered: 'delivered',
+};
+
+export function normalizeOrderStatus(value: unknown): OrderStatus {
+    if (typeof value !== 'string') return 'new';
+    const normalized = value.trim().toLowerCase();
+    return STATUS_ALIAS_TO_CANONICAL[normalized] ?? 'new';
+}
+
+export function toPublicOrderStatus(status: unknown): (typeof PUBLIC_ORDER_STATUS_LIST)[number] {
+    const canonical = normalizeOrderStatus(status);
+    if (canonical === 'to_confirm') return 'pending';
+    if (canonical === 'canceled') return 'cancelled';
+    if (canonical === 'new' || canonical === 'confirmed' || canonical === 'callback') return canonical;
+    return 'pending';
+}
+
 // ── Status labels (French) ──────────────────────────────────
-export const STATUS_LABELS: Record<OrderStatus, string> = {
+export const STATUS_LABELS: Record<OrderStatusInput, string> = {
     new: 'Nouvelles',
     to_confirm: 'À confirmer',
+    pending: 'À confirmer',
     confirmed: 'Confirmées',
     shipped: 'Expédiées',
     delivered: 'Livrées',
     canceled: 'Annulées',
+    cancelled: 'Annulées',
     callback: 'Callbacks',
 };
 

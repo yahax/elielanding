@@ -1,16 +1,16 @@
-import type { Order, DashboardStats } from './types';
+import { normalizeOrderStatus, type Order, type DashboardStats } from './types';
 
 export function calculateStats(orders: Order[]): DashboardStats {
     const total_orders = orders.length;
     const confirmed = orders.filter(o =>
-        ['confirmed', 'shipped', 'delivered'].includes(o.status)
+        ['confirmed', 'shipped', 'delivered'].includes(normalizeOrderStatus(o.status))
     ).length;
-    const delivered = orders.filter(o => o.status === 'delivered').length;
-    const canceled = orders.filter(o => o.status === 'canceled').length;
+    const delivered = orders.filter(o => normalizeOrderStatus(o.status) === 'delivered').length;
+    const canceled = orders.filter(o => normalizeOrderStatus(o.status) === 'canceled').length;
 
     // Revenue from total_price
     const revenue = orders
-        .filter(o => o.status !== 'canceled')
+        .filter(o => normalizeOrderStatus(o.status) !== 'canceled')
         .reduce((sum, o) => sum + (o.price_mad || o.total_price || 0), 0);
 
     // ── Orders per hour (today) ─────────────────────────────────
@@ -39,14 +39,6 @@ export function calculateStats(orders: Order[]): DashboardStats {
     // ── Top perfumes ───────────────────────────────
     const perfumeMap: Record<string, number> = {};
     orders.forEach(o => {
-        // Collect from items (legacy)
-        if (o.items && Array.isArray(o.items)) {
-            o.items.forEach(item => {
-                if (item.perfume_name) {
-                    perfumeMap[item.perfume_name] = (perfumeMap[item.perfume_name] || 0) + 1;
-                }
-            });
-        }
         // Collect from selected_perfumes (production)
         if (o.selected_perfumes && Array.isArray(o.selected_perfumes)) {
             o.selected_perfumes.forEach(p => {

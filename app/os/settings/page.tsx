@@ -35,6 +35,78 @@ import {
 } from "@/lib/os/settings/helpers";
 import type { OsSettingsModel, TeamRolePreset, WhatsAppTemplate } from "@/lib/os/settings/types";
 
+function toRecord(value: unknown): Record<string, unknown> | null {
+  return value != null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+function mergeModelWithMetadata(model: OsSettingsModel, metadata: Record<string, unknown> | null): OsSettingsModel {
+  if (!metadata) return model;
+  const next: OsSettingsModel = { ...model };
+
+  if (Array.isArray(metadata.whatsappTemplates)) {
+    const templates = metadata.whatsappTemplates as Array<Record<string, unknown>>;
+    next.whatsappTemplates = next.whatsappTemplates.map((template) => {
+      const candidate = templates.find((item) => item?.id === template.id);
+      if (!candidate) return template;
+      return {
+        ...template,
+        active: candidate.active === true,
+        message: typeof candidate.message === "string" && candidate.message.trim().length > 0 ? candidate.message : template.message,
+      };
+    });
+  }
+
+  if (Array.isArray(metadata.teamRoles)) {
+    const roles = metadata.teamRoles as Array<Record<string, unknown>>;
+    next.teamRoles = next.teamRoles.map((role) => {
+      const candidate = roles.find((item) => item?.id === role.id);
+      if (!candidate) return role;
+      return {
+        ...role,
+        canViewRevenue: candidate.canViewRevenue === true,
+        canEditSettings: candidate.canEditSettings === true,
+        canManageTeam: candidate.canManageTeam === true,
+      };
+    });
+  }
+
+  const opsRules = toRecord(metadata.operationsRules);
+  if (opsRules) {
+    if (typeof opsRules.highValueThreshold === "number") next.operations.highValueThreshold = Math.max(100, Math.round(opsRules.highValueThreshold));
+    if (typeof opsRules.vipCustomerThreshold === "number") next.operations.vipCustomerThreshold = Math.max(300, Math.round(opsRules.vipCustomerThreshold));
+    if (typeof opsRules.priorityWeightAge === "number") next.operations.priorityWeightAge = Math.max(1, Math.round(opsRules.priorityWeightAge));
+    if (typeof opsRules.priorityWeightValue === "number") next.operations.priorityWeightValue = Math.max(1, Math.round(opsRules.priorityWeightValue));
+    if (typeof opsRules.riskWeightDelay === "number") next.operations.riskWeightDelay = Math.max(1, Math.round(opsRules.riskWeightDelay));
+    if (typeof opsRules.riskWeightCallbacks === "number") next.operations.riskWeightCallbacks = Math.max(1, Math.round(opsRules.riskWeightCallbacks));
+    if (typeof opsRules.autoFlagHighRisk === "boolean") next.operations.autoFlagHighRisk = opsRules.autoFlagHighRisk;
+    if (typeof opsRules.autoFlagHighValue === "boolean") next.operations.autoFlagHighValue = opsRules.autoFlagHighValue;
+    if (typeof opsRules.slaTargetMinutes === "number") next.operations.slaTargetMinutes = Math.max(10, Math.round(opsRules.slaTargetMinutes));
+  }
+
+  const warRoom = toRecord(metadata.warRoomSettings);
+  if (warRoom) {
+    if (typeof warRoom.enabled === "boolean") next.warRoom.enabled = warRoom.enabled;
+    if (warRoom.preference === "auto" || warRoom.preference === "on" || warRoom.preference === "off") next.warRoom.preference = warRoom.preference;
+    if (warRoom.mobileDensity === "comfortable" || warRoom.mobileDensity === "compact") next.warRoom.mobileDensity = warRoom.mobileDensity;
+    if (typeof warRoom.urgencyThreshold === "number") next.warRoom.urgencyThreshold = Math.max(1, Math.round(warRoom.urgencyThreshold));
+    if (typeof warRoom.slaThresholdMinutes === "number") next.warRoom.slaThresholdMinutes = Math.max(15, Math.round(warRoom.slaThresholdMinutes));
+  }
+
+  const dashboard = toRecord(metadata.dashboardPreferences);
+  if (dashboard) {
+    if (dashboard.defaultPeriodDays === 7 || dashboard.defaultPeriodDays === 30) next.dashboard.defaultPeriodDays = dashboard.defaultPeriodDays;
+    if (dashboard.operatorDensity === "comfortable" || dashboard.operatorDensity === "compact") next.dashboard.operatorDensity = dashboard.operatorDensity;
+    if (Array.isArray(dashboard.widgets)) {
+      next.dashboard.widgets = dashboard.widgets.map((item) => String(item).trim()).filter((item) => item.length > 0);
+    }
+    if (Array.isArray(dashboard.sectionOrder)) {
+      next.dashboard.sectionOrder = dashboard.sectionOrder.map((item) => String(item).trim()).filter((item) => item.length > 0);
+    }
+  }
+
+  return next;
+}
+
 export default function SettingsPage() {
   const isMobile = useIsMobile(1024);
   const liveSettings = useOsLiveStore((state) => state.settings);
@@ -46,6 +118,13 @@ export default function SettingsPage() {
   const [error, setError] = useState("");
   const [configured, setConfigured] = useState(true);
   const [bootstrapMessage, setBootstrapMessage] = useState("");
+  const [baselineSignature, setBaselineSignature] = useState<string>("");
+
+  const WAR_ROOM_ADVANCED_ENABLED = false;
+  const OPERATIONS_ADVANCED_ENABLED = false;
+  const TEMPLATES_RUNTIME_ENABLED = false;
+  const TEAM_ACCESS_RUNTIME_ENABLED = false;
+  const DASHBOARD_DENSITY_RUNTIME_ENABLED = false;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -72,11 +151,16 @@ export default function SettingsPage() {
         }));
         next.toastsEnabled = prefs.notifications.toastsEnabled;
         next.soundsEnabled = prefs.notifications.soundsEnabled;
-        next.refreshIntervalSec = prefs.notifications.refreshIntervalSec;
+        next.refreshIntervalSec = Math.min(300, Math.max(30, prefs.notifications.refreshIntervalSec));
         next.warRoom.slaThresholdMinutes = prefs.notifications.slaWarningMinutes;
+        const metadata = toRecord(prefs.metadata);
+        const mergedWithMetadata = mergeModelWithMetadata(next, metadata);
+        setModel(mergedWithMetadata);
+        setBaselineSignature(JSON.stringify(mergedWithMetadata));
+      } else {
+        setModel(next);
+        setBaselineSignature(JSON.stringify(next));
       }
-
-      setModel(next);
       setConfigured(response.configured);
       setBootstrapMessage(response.message || "");
     } catch (err: unknown) {
@@ -127,10 +211,13 @@ export default function SettingsPage() {
           whatsappTemplates: model.whatsappTemplates,
           teamRoles: model.teamRoles,
           operationsRules: model.operations,
+          warRoomSettings: model.warRoom,
+          dashboardPreferences: model.dashboard,
         },
       });
       updateLiveSettings(mapModelToLiveSettings(model));
       persistOsSettings(model);
+      setBaselineSignature(JSON.stringify(model));
       toast.success("Settings enregistrés");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erreur de sauvegarde");
@@ -153,21 +240,22 @@ export default function SettingsPage() {
     }));
   };
 
-  const hasUnsaved = useMemo(() => saving, [saving]);
+  const modelSignature = useMemo(() => JSON.stringify(model), [model]);
+  const hasUnsaved = useMemo(() => !loading && modelSignature !== baselineSignature, [baselineSignature, loading, modelSignature]);
 
   return (
-    <div className="os-page animate-fade-in" style={{ paddingBottom: 96, gap: 12 }}>
+    <div className="os-page animate-fade-in os-settings-page">
       <OsToaster />
 
       <PageHeader
         title="Settings System"
         subtitle="Centre de contrôle opérations, notifications, règles métier et préférences dashboard."
         actions={
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="os-settings-head-actions">
             <button type="button" className="btn-ghost btn-sm btn-icon" onClick={load} aria-label="Rafraîchir">
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
             </button>
-            <button type="button" className="btn btn-primary btn-sm" onClick={onSave} disabled={saving || !configured}>
+            <button type="button" className="btn btn-primary btn-sm" onClick={onSave} disabled={saving || !configured || !hasUnsaved}>
               <Save size={14} />
               {saving ? "Sauvegarde..." : "Enregistrer"}
             </button>
@@ -176,12 +264,12 @@ export default function SettingsPage() {
       />
 
       {!configured ? (
-        <section className="luxury-card" style={{ padding: 14, borderRadius: 14, border: "1px solid rgba(201, 106, 106, 0.3)", background: "var(--danger-soft)" }}>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <AlertTriangle size={16} style={{ color: "var(--danger)" }} />
+        <section className="luxury-card os-settings-alert">
+          <div className="os-settings-alert-inner">
+            <AlertTriangle size={16} className="os-settings-alert-icon" />
             <div>
-              <div style={{ fontSize: 14, fontWeight: 900, color: "var(--danger)" }}>Configuration backend incomplète</div>
-              <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--text-dim)", fontWeight: 700 }}>
+              <div className="os-settings-alert-title">Configuration backend incomplète</div>
+              <p className="os-settings-alert-copy">
                 {bootstrapMessage || "La table settings doit être initialisée pour persister les données serveur."}
               </p>
             </div>
@@ -198,9 +286,9 @@ export default function SettingsPage() {
         onRetry={load}
         useSkeleton
       >
-        <section style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-          <SettingsSection title="Shop Settings" description="Identité boutique et paramètres globaux." icon={Store}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+        <section className="os-settings-grid" style={{ gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))" }}>
+          <SettingsSection title="Shop Settings" description="Identité boutique et paramètres globaux." icon={Store} badgeLabel="Branché" badgeTone="success">
+            <div className="os-settings-two-col">
               <SettingsInputRow label="Nom boutique" value={model.shop.shop_name} onChange={(value) => setModel((prev) => ({ ...prev, shop: { ...prev.shop, shop_name: value } }))} />
               <SettingsInputRow label="Email support" type="email" value={model.shop.support_email} onChange={(value) => setModel((prev) => ({ ...prev, shop: { ...prev.shop, support_email: value } }))} />
               <SettingsInputRow label="WhatsApp" value={model.shop.whatsapp} onChange={(value) => setModel((prev) => ({ ...prev, shop: { ...prev.shop, whatsapp: value } }))} />
@@ -208,7 +296,7 @@ export default function SettingsPage() {
               <SettingsInputRow label="Timezone" value={model.shop.timezone} onChange={(value) => setModel((prev) => ({ ...prev, shop: { ...prev.shop, timezone: value } }))} />
               <SettingsInputRow label="Heures équipe" value={model.shop.teamHours} onChange={(value) => setModel((prev) => ({ ...prev, shop: { ...prev.shop, teamHours: value } }))} />
             </div>
-            <div style={{ marginTop: 8, display: "grid", gap: 8 }}>
+            <div className="os-settings-stack os-settings-block">
               <SettingsToggleRow
                 label="Auto validation"
                 description="Valider automatiquement les commandes selon règles existantes."
@@ -224,8 +312,8 @@ export default function SettingsPage() {
             </div>
           </SettingsSection>
 
-          <SettingsSection title="Notifications Settings" description="Toasts, sons, catégories et fréquence live." icon={Bell}>
-            <div style={{ display: "grid", gap: 8 }}>
+          <SettingsSection title="Notifications Settings" description="Toasts, sons, catégories et fréquence live." icon={Bell} badgeLabel="Branché" badgeTone="success">
+            <div className="os-settings-stack">
               <SettingsToggleRow
                 label="Toasts live"
                 description="Afficher les notifications contextuelles sur action/event."
@@ -240,19 +328,19 @@ export default function SettingsPage() {
               />
             </div>
 
-            <div style={{ marginTop: 8 }}>
+            <div className="os-settings-block">
               <SettingsInputRow
                 label="Refresh polling"
                 type="number"
-                min={10}
-                max={120}
+                min={30}
+                max={300}
                 value={model.refreshIntervalSec}
                 suffix="sec"
-                onChange={(value) => setModel((prev) => ({ ...prev, refreshIntervalSec: Math.max(10, Number(value) || 10) }))}
+                onChange={(value) => setModel((prev) => ({ ...prev, refreshIntervalSec: Math.min(300, Math.max(30, Number(value) || 30)) }))}
               />
             </div>
 
-            <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+            <div className="os-settings-two-col os-settings-block">
               {model.notificationPreferences.map((pref) => (
                 <SettingsToggleRow
                   key={pref.category}
@@ -272,40 +360,39 @@ export default function SettingsPage() {
             </div>
           </SettingsSection>
 
-          <SettingsSection title="War Room Settings" description="Densité mobile, seuil urgence et SLA." icon={Gauge}>
-            <div style={{ display: "grid", gap: 8 }}>
+          <SettingsSection title="War Room Settings" description="Densité mobile, seuil urgence et SLA." icon={Gauge} badgeLabel="Partiel" badgeTone="warning">
+            <div className="os-settings-stack">
               <SettingsToggleRow
                 label="War Room activé"
-                description="Mode intensif pour flux opérateurs mobile."
+                description="Mode intensif global. Pilotage runtime direct à venir."
                 checked={model.warRoom.enabled}
                 onChange={(checked) => setModel((prev) => ({ ...prev, warRoom: { ...prev.warRoom, enabled: checked } }))}
+                disabled={!WAR_ROOM_ADVANCED_ENABLED}
               />
             </div>
-            <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 10, fontWeight: 900, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <div className="os-settings-two-col os-settings-block">
+              <label className="os-settings-input-row">
+                <span className="os-settings-input-label">
                   Préférence mode
                 </span>
                 <select
-                  className="filter-select"
+                  className="filter-select os-settings-select"
                   value={model.warRoom.preference}
                   onChange={(event) => setModel((prev) => ({ ...prev, warRoom: { ...prev.warRoom, preference: event.target.value as OsSettingsModel["warRoom"]["preference"] } }))}
-                  style={{ height: 42, borderRadius: 12 }}
                 >
                   <option value="auto">Auto</option>
                   <option value="on">Forcer ON</option>
                   <option value="off">Forcer OFF</option>
                 </select>
               </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 10, fontWeight: 900, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              <label className="os-settings-input-row">
+                <span className="os-settings-input-label">
                   Densité mobile
                 </span>
                 <select
-                  className="filter-select"
+                  className="filter-select os-settings-select"
                   value={model.warRoom.mobileDensity}
                   onChange={(event) => setModel((prev) => ({ ...prev, warRoom: { ...prev.warRoom, mobileDensity: event.target.value as OsSettingsModel["warRoom"]["mobileDensity"] } }))}
-                  style={{ height: 42, borderRadius: 12 }}
                 >
                   <option value="comfortable">Confort</option>
                   <option value="compact">Compact</option>
@@ -316,6 +403,7 @@ export default function SettingsPage() {
                 type="number"
                 value={model.warRoom.urgencyThreshold}
                 onChange={(value) => setModel((prev) => ({ ...prev, warRoom: { ...prev.warRoom, urgencyThreshold: Math.max(1, Number(value) || 1) } }))}
+                disabled={!WAR_ROOM_ADVANCED_ENABLED}
               />
               <SettingsInputRow
                 label="Seuil SLA"
@@ -329,8 +417,8 @@ export default function SettingsPage() {
             </div>
           </SettingsSection>
 
-          <SettingsSection title="Operations Rules" description="Poids de scoring, flags automatiques et SLA cible." icon={SlidersHorizontal}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+          <SettingsSection title="Operations Rules" description="Poids de scoring, flags automatiques et SLA cible." icon={SlidersHorizontal} badgeLabel="Partiel" badgeTone="warning">
+            <div className="os-settings-two-col">
               <SettingsInputRow
                 label="Seuil haute valeur"
                 type="number"
@@ -344,30 +432,35 @@ export default function SettingsPage() {
                 suffix="MAD"
                 value={model.operations.vipCustomerThreshold}
                 onChange={(value) => setModel((prev) => ({ ...prev, operations: { ...prev.operations, vipCustomerThreshold: Math.max(300, Number(value) || 300) } }))}
+                disabled={!OPERATIONS_ADVANCED_ENABLED}
               />
               <SettingsInputRow
                 label="Poids priorité âge"
                 type="number"
                 value={model.operations.priorityWeightAge}
                 onChange={(value) => setModel((prev) => ({ ...prev, operations: { ...prev.operations, priorityWeightAge: Math.max(1, Number(value) || 1) } }))}
+                disabled={!OPERATIONS_ADVANCED_ENABLED}
               />
               <SettingsInputRow
                 label="Poids priorité valeur"
                 type="number"
                 value={model.operations.priorityWeightValue}
                 onChange={(value) => setModel((prev) => ({ ...prev, operations: { ...prev.operations, priorityWeightValue: Math.max(1, Number(value) || 1) } }))}
+                disabled={!OPERATIONS_ADVANCED_ENABLED}
               />
               <SettingsInputRow
                 label="Poids risque délai"
                 type="number"
                 value={model.operations.riskWeightDelay}
                 onChange={(value) => setModel((prev) => ({ ...prev, operations: { ...prev.operations, riskWeightDelay: Math.max(1, Number(value) || 1) } }))}
+                disabled={!OPERATIONS_ADVANCED_ENABLED}
               />
               <SettingsInputRow
                 label="Poids risque callbacks"
                 type="number"
                 value={model.operations.riskWeightCallbacks}
                 onChange={(value) => setModel((prev) => ({ ...prev, operations: { ...prev.operations, riskWeightCallbacks: Math.max(1, Number(value) || 1) } }))}
+                disabled={!OPERATIONS_ADVANCED_ENABLED}
               />
               <SettingsInputRow
                 label="SLA target"
@@ -378,58 +471,64 @@ export default function SettingsPage() {
               />
             </div>
 
-            <div style={{ marginTop: 8, display: "grid", gap: 8 }}>
+            <div className="os-settings-stack os-settings-block">
               <SettingsToggleRow
                 label="Auto flag high risk"
-                description="Marquer automatiquement les commandes à risque élevé."
+                description="Marquage auto high-risk runtime à venir."
                 checked={model.operations.autoFlagHighRisk}
                 onChange={(checked) => setModel((prev) => ({ ...prev, operations: { ...prev.operations, autoFlagHighRisk: checked } }))}
+                disabled={!OPERATIONS_ADVANCED_ENABLED}
               />
               <SettingsToggleRow
                 label="Auto flag high value"
-                description="Marquer automatiquement les commandes haute valeur."
+                description="Marquage auto high-value runtime à venir."
                 checked={model.operations.autoFlagHighValue}
                 onChange={(checked) => setModel((prev) => ({ ...prev, operations: { ...prev.operations, autoFlagHighValue: checked } }))}
+                disabled={!OPERATIONS_ADVANCED_ENABLED}
               />
             </div>
           </SettingsSection>
 
-          <SettingsSection title="WhatsApp Templates" description="Messages confirmation, callback, relance, livraison et offre." icon={MessageSquareMore}>
-            <div style={{ display: "grid", gap: 8 }}>
+          <SettingsSection title="WhatsApp Templates" description="Messages confirmation, callback, relance, livraison et offre." icon={MessageSquareMore} badgeLabel="À venir" badgeTone="warning">
+            <div className="os-settings-stack">
               {model.whatsappTemplates.map((template) => (
                 <TemplateEditorCard
                   key={template.id}
                   template={template}
                   onToggleActive={(active) => updateTemplate(template.id, (current) => ({ ...current, active }))}
                   onChangeMessage={(message) => updateTemplate(template.id, (current) => ({ ...current, message }))}
+                  disabled={!TEMPLATES_RUNTIME_ENABLED}
                 />
               ))}
             </div>
           </SettingsSection>
 
-          <SettingsSection title="Team & Access" description="Préparation des rôles, visibilité et permissions." icon={Users}>
-            <div style={{ display: "grid", gap: 8 }}>
+          <SettingsSection title="Team & Access" description="Préparation des rôles, visibilité et permissions." icon={Users} badgeLabel="À venir" badgeTone="warning">
+            <div className="os-settings-stack">
               {model.teamRoles.map((role) => (
-                <article key={role.id} className="luxury-card" style={{ padding: 12, borderRadius: 14 }}>
-                  <div style={{ marginBottom: 8, fontSize: 13, fontWeight: 900, color: "var(--text)" }}>{role.label}</div>
-                  <div style={{ display: "grid", gap: 8 }}>
+                <article key={role.id} className="luxury-card os-settings-role-card">
+                  <div className="os-settings-role-title">{role.label}</div>
+                  <div className="os-settings-stack">
                     <SettingsToggleRow
                       label="Voir revenue"
                       description="Accès métriques chiffre d'affaires."
                       checked={role.canViewRevenue}
                       onChange={(checked) => updateRole(role.id, (current) => ({ ...current, canViewRevenue: checked }))}
+                      disabled={!TEAM_ACCESS_RUNTIME_ENABLED}
                     />
                     <SettingsToggleRow
                       label="Éditer settings"
                       description="Modifier les règles système."
                       checked={role.canEditSettings}
                       onChange={(checked) => updateRole(role.id, (current) => ({ ...current, canEditSettings: checked }))}
+                      disabled={!TEAM_ACCESS_RUNTIME_ENABLED}
                     />
                     <SettingsToggleRow
                       label="Gérer équipe"
                       description="Créer/modifier accès opérateurs."
                       checked={role.canManageTeam}
                       onChange={(checked) => updateRole(role.id, (current) => ({ ...current, canManageTeam: checked }))}
+                      disabled={!TEAM_ACCESS_RUNTIME_ENABLED}
                     />
                   </div>
                 </article>
@@ -437,33 +536,32 @@ export default function SettingsPage() {
             </div>
           </SettingsSection>
 
-          <SettingsSection title="Dashboard Preferences" description="Widgets visibles, ordre sections et période par défaut." icon={Shield}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 10, fontWeight: 900, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <SettingsSection title="Dashboard Preferences" description="Widgets visibles, ordre sections et période par défaut." icon={Shield} badgeLabel="Partiel" badgeTone="warning">
+            <div className="os-settings-two-col">
+              <label className="os-settings-input-row">
+                <span className="os-settings-input-label">
                   Période par défaut
                 </span>
                 <select
-                  className="filter-select"
+                  className="filter-select os-settings-select"
                   value={model.dashboard.defaultPeriodDays}
                   onChange={(event) => setModel((prev) => ({ ...prev, dashboard: { ...prev.dashboard, defaultPeriodDays: Number(event.target.value) as 7 | 30 } }))}
-                  style={{ height: 42, borderRadius: 12 }}
                 >
                   <option value={7}>7 jours</option>
                   <option value={30}>30 jours</option>
                 </select>
               </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 10, fontWeight: 900, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              <label className="os-settings-input-row">
+                <span className="os-settings-input-label">
                   Densité opérateur
                 </span>
                 <select
-                  className="filter-select"
+                  className="filter-select os-settings-select"
                   value={model.dashboard.operatorDensity}
                   onChange={(event) =>
                     setModel((prev) => ({ ...prev, dashboard: { ...prev.dashboard, operatorDensity: event.target.value as OsSettingsModel["dashboard"]["operatorDensity"] } }))
                   }
-                  style={{ height: 42, borderRadius: 12 }}
+                  disabled={!DASHBOARD_DENSITY_RUNTIME_ENABLED}
                 >
                   <option value="comfortable">Confort</option>
                   <option value="compact">Compact</option>
@@ -471,7 +569,7 @@ export default function SettingsPage() {
               </label>
             </div>
 
-            <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+            <div className="os-settings-stack os-settings-block">
               {[
                 { id: "kpi", label: "Widget KPI" },
                 { id: "alerts", label: "Widget Alertes" },
@@ -502,9 +600,13 @@ export default function SettingsPage() {
         </section>
       </DataStateWrapper>
 
-      {hasUnsaved ? (
-        <div style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 700, textAlign: "right" }}>Sauvegarde en cours...</div>
-      ) : null}
+      {saving ? (
+        <div className="os-settings-sync-status is-saving">Sauvegarde en cours...</div>
+      ) : hasUnsaved ? (
+        <div className="os-settings-sync-status is-dirty">Modifications non enregistrées</div>
+      ) : (
+        <div className="os-settings-sync-status is-clean">Configuration synchronisée</div>
+      )}
     </div>
   );
 }

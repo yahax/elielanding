@@ -1,28 +1,37 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { STATUS_LIST } from "@/lib/types";
 import { changeOrderStatus } from "@/lib/os/orders/server/order-mutations";
 import { resolveActorFromRequest } from "@/lib/os/server/actor";
 import { mapApiError, toApiErrorResponse } from "@/lib/os/orders/server/http";
-import type { DomainOrderStatus } from "@/lib/os/domain/types";
+import { parseDomainOrderStatus } from "@/lib/os/domain/status-transition-guards";
 import { executeIdempotentJsonMutation } from "@/lib/os/server/idempotency";
 
 const bodySchema = z.object({
   status: z.string().min(1),
 });
 
-function isDomainOrderStatus(value: string): value is DomainOrderStatus {
-  return value === "ready_to_ship" || (STATUS_LIST as string[]).includes(value);
-}
-
 export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
     const payload = bodySchema.parse(await req.json());
-    const nextStatus = payload.status;
-    if (!isDomainOrderStatus(nextStatus)) {
+    const nextStatus = parseDomainOrderStatus(payload.status);
+    if (!nextStatus) {
       return NextResponse.json(
-        { error: "Invalid status", details: { allowed: [...STATUS_LIST, "ready_to_ship"] } },
+        {
+          error: "Invalid status",
+          details: {
+            allowed: [
+              "new",
+              "pending",
+              "confirmed",
+              "callback",
+              "cancelled",
+              "shipped",
+              "delivered",
+              "ready_to_ship",
+            ],
+          },
+        },
         { status: 400 }
       );
     }

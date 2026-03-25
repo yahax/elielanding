@@ -3,7 +3,7 @@
 import { formatCompactCurrencyMAD } from "@/lib/os/orders/helpers/format";
 import type { OrdersSummaryStats, SummaryMetricKey } from "@/lib/os/orders/types";
 import { AlertTriangle, CheckCheck, Clock3, PhoneCall, ShoppingBag, XCircle } from "lucide-react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 interface MetricCard {
   key: SummaryMetricKey;
@@ -12,29 +12,6 @@ interface MetricCard {
   icon: ReactNode;
   tone: "neutral" | "danger" | "warning" | "success";
 }
-
-const TONE_STYLE: Record<MetricCard["tone"], CSSProperties> = {
-  neutral: {
-    border: "1px solid var(--border)",
-    background: "var(--surface)",
-    color: "var(--text)",
-  },
-  danger: {
-    border: "1px solid rgba(201, 106, 106, 0.32)",
-    background: "var(--danger-soft)",
-    color: "var(--danger)",
-  },
-  warning: {
-    border: "1px solid rgba(213, 161, 62, 0.3)",
-    background: "var(--warning-soft)",
-    color: "var(--warning)",
-  },
-  success: {
-    border: "1px solid rgba(47, 143, 99, 0.3)",
-    background: "var(--success-soft)",
-    color: "var(--success)",
-  },
-};
 
 export function OrdersSummaryStrip({
   stats,
@@ -91,13 +68,7 @@ export function OrdersSummaryStrip({
   ];
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-        gap: 10,
-      }}
-    >
+    <div className="os-kpi-grid">
       {metrics.map((metric) => {
         const active = activeMetric === metric.key;
 
@@ -106,42 +77,20 @@ export function OrdersSummaryStrip({
             type="button"
             key={metric.key}
             onClick={() => onMetricClick(metric.key)}
-            style={{
-              textAlign: "left",
-              borderRadius: 14,
-              padding: "12px 14px",
-              cursor: "pointer",
-              transition: "all .2s ease",
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
-              ...TONE_STYLE[metric.tone],
-              boxShadow: active ? "0 8px 20px rgba(30,26,23,0.08)" : "none",
-              transform: active ? "translateY(-1px)" : "none",
-            }}
+            className={`os-kpi-card os-kpi-tone-${metric.tone} ${active ? "is-active" : ""}`}
           >
-            <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 800, letterSpacing: "0.05em" }}>
+            <span className="os-kpi-head">
               {metric.icon}
               {metric.label}
             </span>
-            <span style={{ fontSize: 24, fontWeight: 900, lineHeight: 1, color: "var(--text)" }}>{metric.value}</span>
+            <span className="os-kpi-value">{metric.value}</span>
           </button>
         );
       })}
 
-      <div
-        style={{
-          border: "1px solid var(--border)",
-          borderRadius: 14,
-          padding: "12px 14px",
-          background: "var(--surface)",
-          display: "flex",
-          flexDirection: "column",
-          gap: 6,
-        }}
-      >
-        <span style={{ fontSize: 11, fontWeight: 800, color: "var(--text-dim)", letterSpacing: "0.05em" }}>Panier moyen estimé</span>
-        <span style={{ fontSize: 20, fontWeight: 900, color: "var(--text)" }}>{formatCompactCurrencyMAD(stats.avgBasket)}</span>
+      <div className="os-kpi-card os-kpi-tone-neutral">
+        <span className="os-kpi-head">Panier moyen estimé</span>
+        <span className="os-kpi-value" style={{ fontSize: 20 }}>{formatCompactCurrencyMAD(stats.avgBasket)}</span>
       </div>
     </div>
   );

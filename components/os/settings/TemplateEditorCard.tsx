@@ -7,25 +7,15 @@ interface TemplateEditorCardProps {
   template: WhatsAppTemplate;
   onToggleActive: (active: boolean) => void;
   onChangeMessage: (message: string) => void;
+  disabled?: boolean;
 }
 
-export function TemplateEditorCard({ template, onToggleActive, onChangeMessage }: TemplateEditorCardProps) {
+export function TemplateEditorCard({ template, onToggleActive, onChangeMessage, disabled = false }: TemplateEditorCardProps) {
   return (
-    <article className="luxury-card" style={{ padding: 12, borderRadius: 14 }}>
-      <div style={{ marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 900, color: "var(--text)" }}>{template.label}</div>
-        <span
-          style={{
-            borderRadius: 999,
-            border: "1px solid var(--border)",
-            background: template.active ? "var(--success-soft)" : "var(--bg-elevated)",
-            color: template.active ? "var(--success)" : "var(--text-dim)",
-            fontSize: 10,
-            fontWeight: 900,
-            padding: "3px 8px",
-            textTransform: "uppercase",
-          }}
-        >
+    <article className={`luxury-card os-settings-template-card ${disabled ? "is-disabled" : ""}`}>
+      <div className="os-settings-template-head">
+        <div className="os-settings-template-title">{template.label}</div>
+        <span className={`os-settings-template-status ${template.active ? "is-active" : "is-off"}`}>
           {template.active ? "Actif" : "Off"}
         </span>
       </div>
@@ -35,16 +25,18 @@ export function TemplateEditorCard({ template, onToggleActive, onChangeMessage }
         description="Rendre ce modèle disponible dans les actions rapides."
         checked={template.active}
         onChange={onToggleActive}
+        disabled={disabled}
       />
 
-      <label style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
-        <span style={{ fontSize: 10, fontWeight: 900, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+      <label className="os-settings-template-message">
+        <span className="os-settings-input-label">
           Message
         </span>
         <textarea
-          className="filter-input"
+          className="filter-input os-settings-template-textarea"
           value={template.message}
           onChange={(event) => onChangeMessage(event.target.value)}
+          disabled={disabled}
           rows={3}
           style={{ width: "100%", resize: "vertical", borderRadius: 12, minHeight: 86 }}
         />
@@ -52,4 +44,3 @@ export function TemplateEditorCard({ template, onToggleActive, onChangeMessage }
     </article>
   );
 }
-

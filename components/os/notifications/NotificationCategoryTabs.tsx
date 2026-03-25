@@ -21,7 +21,7 @@ export function NotificationCategoryTabs({
   counts: Record<NotificationCategory, number>;
 }) {
   return (
-    <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
+    <div className="os-notification-tabs">
       {(Object.keys(LABELS) as NotificationCategory[]).map((category) => {
         const isActive = category === active;
         return (
@@ -29,8 +29,7 @@ export function NotificationCategoryTabs({
             key={category}
             type="button"
             onClick={() => onChange(category)}
-            className={isActive ? "btn btn-primary btn-sm" : "btn-ghost btn-sm"}
-            style={{ borderRadius: 999, whiteSpace: "nowrap", height: 34 }}
+            className={isActive ? "btn btn-primary btn-sm os-notification-tab is-active" : "btn-ghost btn-sm os-notification-tab"}
           >
             {LABELS[category]} ({counts[category] || 0})
           </button>

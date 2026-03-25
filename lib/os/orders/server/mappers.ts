@@ -1,7 +1,7 @@
 import type { DomainOrder, DomainOrderItem, DomainOrderStatus } from "@/lib/os/domain/types";
 import type { OrderStorageRow } from "@/lib/os/orders/adapters/types";
 import type { NormalizedOrder } from "@/lib/os/types";
-import type { OrderStatus } from "@/lib/types";
+import { normalizeOrderStatus, type OrderStatus } from "@/lib/types";
 
 export interface OrderOsMeta {
   assignedOperatorId: string | null;
@@ -77,11 +77,12 @@ export function getOrderOsMeta(meta: Record<string, unknown> | null | undefined)
 }
 
 function resolveDomainStatus(row: OrderStorageRow, osMeta: OrderOsMeta): DomainOrderStatus {
-  if (row.status === "confirmed" && osMeta.nextBestAction === "mark_shipped") {
+  const normalizedStatus = normalizeOrderStatus(row.status);
+  if (normalizedStatus === "confirmed" && osMeta.nextBestAction === "mark_shipped") {
     return "ready_to_ship";
   }
 
-  return row.status;
+  return normalizedStatus;
 }
 
 function buildOrderItems(row: OrderStorageRow): DomainOrderItem[] {
@@ -162,7 +163,6 @@ export function mapDomainOrderToNormalizedOrder(order: DomainOrder): NormalizedO
     canceled_at: order.cancelledAt,
     selected_perfumes: selectedPerfumes,
     gift_perfume: giftPerfume,
-    items: [],
     meta: order.metadata,
   };
 }

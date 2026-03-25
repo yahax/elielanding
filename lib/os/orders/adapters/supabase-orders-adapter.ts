@@ -1,5 +1,6 @@
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { DomainConflictError } from "@/lib/os/domain/errors";
+import { normalizeOrderStatus } from "@/lib/types";
 import type {
   OrderStorageFilters,
   OrderStoragePatch,
@@ -18,6 +19,27 @@ function isSupabaseError(error: unknown): error is { message: string; code?: str
   return typeof error === "object" && error !== null && "message" in error;
 }
 
+function expandStatusFilters(statuses: string[]): string[] {
+  const expanded = new Set<string>();
+
+  for (const raw of statuses) {
+    const normalized = normalizeOrderStatus(raw);
+    if (normalized === "to_confirm") {
+      expanded.add("to_confirm");
+      expanded.add("pending");
+      continue;
+    }
+    if (normalized === "canceled") {
+      expanded.add("canceled");
+      expanded.add("cancelled");
+      continue;
+    }
+    expanded.add(normalized);
+  }
+
+  return Array.from(expanded);
+}
+
 export class SupabaseOrdersAdapter implements OrdersDataAdapter {
   async listOrders(filters: OrderStorageFilters = {}): Promise<OrderStorageRow[]> {
     const supabase = createServiceSupabaseClient();
@@ -34,11 +56,11 @@ export class SupabaseOrdersAdapter implements OrdersDataAdapter {
     }
 
     if (filters.pipeline) {
-      query = query.not("status", "in", '("delivered","canceled")');
+      query = query.not("status", "in", '("delivered","canceled","cancelled")');
     }
 
     if (filters.statuses && filters.statuses.length > 0) {
-      query = query.in("status", filters.statuses);
+      query = query.in("status", expandStatusFilters(filters.statuses));
     }
 
     if (filters.sources && filters.sources.length > 0) {

@@ -1,19 +1,23 @@
 import { calculateStats } from "@/lib/analytics";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
-import type { Order } from "@/lib/types";
+import { normalizeOrderStatus, type Order } from "@/lib/types";
 import type { CatalogProduct, NormalizedOrder, OrderFilters } from "@/lib/os/types";
 
 type OrderRow = {
   id: string;
   customer_name: string | null;
   phone: string | null;
+  customer_phone?: string | null;
   city: string | null;
   address: string | null;
   pack_type: string | null;
+  pack?: string | null;
   status: string | null;
   source: string | null;
+  notes?: string | null;
   selected_perfumes: string[] | null;
   gift_perfume: string | null;
+  total_price?: number | null;
   price: number | null;
   price_mad: number | null;
   offer_mode: string | null;
@@ -26,32 +30,54 @@ type OrderRow = {
   canceled_at: string | null;
 };
 
+type PerfumeCatalogRow = {
+  id: string | null;
+  name: string | null;
+  slug: string | null;
+  gender: string | null;
+  tier: string | null;
+  is_active: boolean | null;
+  image_url: string | null;
+  created_at: string | null;
+};
+
+type LegacyPerfumeRow = {
+  id: string | null;
+  name: string | null;
+  category: string | null;
+  stock: number | null;
+  created_at: string | null;
+};
+
 export function mapOrderRow(row: OrderRow): NormalizedOrder {
-  const total = row.price_mad ?? row.price ?? 0;
+  const phone = row.phone ?? row.customer_phone ?? null;
+  const packType = row.pack_type ?? row.pack ?? "mixte";
+  const total = row.price_mad ?? row.price ?? row.total_price ?? 0;
+  const status = normalizeOrderStatus(row.status);
 
   return {
     id: row.id,
     customer_id: null,
     customer_name: row.customer_name,
-    phone: row.phone,
+    phone,
     city: row.city,
     address: row.address,
-    pack_type: (row.pack_type || "mixte") as Order["pack_type"],
+    pack_type: packType as Order["pack_type"],
     total_price: total,
     price_mad: row.price_mad ?? total,
-    status: (row.status || "new") as Order["status"],
+    status,
     source: row.source || "direct",
-    notes: null,
+    notes: row.notes ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at || row.created_at,
     confirmed_at: row.confirmed_at,
     shipped_at: row.shipped_at,
     delivered_at: row.delivered_at,
     canceled_at: row.canceled_at,
-    selected_perfumes: row.selected_perfumes || [],
+    selected_perfumes: Array.isArray(row.selected_perfumes) ? row.selected_perfumes : [],
     gift_perfume: row.gift_perfume,
     offer_mode: row.offer_mode || undefined,
-    items: [],
+    meta: row.meta ?? null,
   };
 }
 
@@ -61,9 +87,7 @@ export async function fetchOrders(filters: OrderFilters = {}): Promise<Normalize
 
   let query = supabase
     .from("orders")
-    .select(
-      "id,customer_name,phone,city,address,pack_type,status,source,selected_perfumes,gift_perfume,price,price_mad,offer_mode,meta,created_at,updated_at,confirmed_at,shipped_at,delivered_at,canceled_at"
-    )
+    .select("*")
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -72,78 +96,158 @@ export async function fetchOrders(filters: OrderFilters = {}): Promise<Normalize
     query = query.gte("created_at", since);
   }
 
-  if (filters.pipeline) {
-    // Pipeline usually excludes final states to keep board clean
-    query = query.not("status", "in", '("delivered","canceled")');
-  }
-
-  if (filters.status) query = query.eq("status", filters.status);
-  if (filters.source) query = query.eq("source", filters.source);
-  if (filters.pack) query = query.eq("pack_type", filters.pack);
-
-  if (filters.search) {
-    const search = filters.search.trim();
-    if (search.length > 0) {
-      // Use logical OR for search across name, phone, and city
-      query = query.or(
-        `customer_name.ilike.%${search}%,phone.ilike.%${search}%,city.ilike.%${search}%`
-      );
-    }
-  }
-
   const { data, error } = await query;
   if (error) {
     console.warn("[OS/SERVER] fetchOrders fell back to empty array due to error:", error.message || error);
     return [];
   }
 
-  return (data || []).map((row) => mapOrderRow(row as OrderRow));
+  const normalized = (data || []).map((row) => mapOrderRow(row as OrderRow));
+  const searchToken = filters.search?.trim().toLowerCase() ?? "";
+
+  return normalized.filter((order) => {
+    if (filters.pipeline && (order.status === "delivered" || order.status === "canceled")) {
+      return false;
+    }
+
+    if (filters.status && order.status !== normalizeOrderStatus(filters.status)) {
+      return false;
+    }
+
+    if (filters.source && (order.source || "").toLowerCase() !== filters.source.toLowerCase()) {
+      return false;
+    }
+
+    if (filters.pack && (order.pack_type || "").toLowerCase() !== filters.pack.toLowerCase()) {
+      return false;
+    }
+
+    if (searchToken.length > 0) {
+      const inName = (order.customer_name || "").toLowerCase().includes(searchToken);
+      const inPhone = (order.phone || "").toLowerCase().includes(searchToken);
+      const inCity = (order.city || "").toLowerCase().includes(searchToken);
+      const inId = (order.id || "").toLowerCase().includes(searchToken);
+      if (!inName && !inPhone && !inCity && !inId) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 }
 
 export async function fetchCatalogProducts(): Promise<CatalogProduct[]> {
   try {
     const supabase = createServiceSupabaseClient();
-
-    // Join perfumes with inventory
-    const { data, error } = await supabase
+    const { data: perfumesModern, error: perfumesModernError } = await supabase
       .from("perfumes")
-      .select(`
-        id,
-        name,
-        slug,
-        gender,
-        tier,
-        is_active,
-        image_url,
-        created_at,
-        inventory (
-          stock,
-          low_stock_threshold
-        )
-      `)
+      .select("id,name,slug,gender,tier,is_active,image_url,created_at")
       .order("name", { ascending: true });
 
-    if (error) {
-      if (error.code === "PGRST204" || error.code === "42P01") {
+    let perfumeRows: Array<PerfumeCatalogRow | LegacyPerfumeRow> = [];
+    let legacyPerfumeShape = false;
+
+    if (perfumesModernError) {
+      if (perfumesModernError.code === "PGRST205" || perfumesModernError.code === "42P01") {
         console.warn("[OS/SERVER] Perfumes table missing, returning empty catalog");
         return [];
       }
-      console.error("[OS/SERVER] fetchCatalogProducts error:", error);
-      throw error;
+
+      // Legacy schema fallback (perfumes table without slug/gender/tier columns).
+      const { data: perfumesLegacy, error: perfumesLegacyError } = await supabase
+        .from("perfumes")
+        .select("id,name,category,stock,created_at")
+        .order("name", { ascending: true });
+
+      if (perfumesLegacyError) {
+        console.error("[OS/SERVER] fetchCatalogProducts legacy perfumes error:", perfumesLegacyError);
+        throw perfumesLegacyError;
+      }
+
+      perfumeRows = (perfumesLegacy || []) as LegacyPerfumeRow[];
+      legacyPerfumeShape = true;
+    } else {
+      perfumeRows = (perfumesModern || []) as PerfumeCatalogRow[];
     }
 
-    return (data || []).map((row: any) => {
-      const inv = row.inventory?.[0] || row.inventory || {};
+    let inventoryRows: Array<Record<string, unknown>> = [];
+    let inventoryError: { code?: string } | null = null;
+
+    const inventoryWithThreshold = await supabase
+      .from("inventory")
+      .select("perfume_id,stock,low_stock_threshold");
+
+    if (inventoryWithThreshold.error) {
+      // Legacy inventory fallback (no low_stock_threshold column).
+      const inventoryLegacy = await supabase
+        .from("inventory")
+        .select("perfume_id,stock");
+
+      if (inventoryLegacy.error) {
+        inventoryError = inventoryLegacy.error;
+      } else {
+        inventoryRows = (inventoryLegacy.data || []) as Array<Record<string, unknown>>;
+      }
+    } else {
+      inventoryRows = (inventoryWithThreshold.data || []) as Array<Record<string, unknown>>;
+    }
+
+    if (inventoryError && inventoryError.code !== "PGRST204" && inventoryError.code !== "PGRST205" && inventoryError.code !== "42P01") {
+      console.error("[OS/SERVER] fetchCatalogProducts inventory error:", inventoryError);
+      throw inventoryError;
+    }
+
+    const inventoryMap = new Map<
+      string,
+      {
+        stock: number;
+        low_stock_threshold: number;
+      }
+    >();
+
+    for (const row of inventoryRows) {
+      const key = String((row as { perfume_id: unknown }).perfume_id ?? "");
+      if (!key) continue;
+      inventoryMap.set(key, {
+        stock: Number((row as { stock?: unknown }).stock ?? 0) || 0,
+        low_stock_threshold: Number((row as { low_stock_threshold?: unknown }).low_stock_threshold ?? 5) || 5,
+      });
+    }
+
+    if (legacyPerfumeShape) {
+      return (perfumeRows as LegacyPerfumeRow[]).map((row) => {
+        const id = String(row.id ?? "");
+        const inv = inventoryMap.get(id);
+        const fallbackStock = Number(row.stock ?? 0) || 0;
+
+        return {
+          id,
+          name: row.name ?? "Produit",
+          slug: (row.name ?? "produit").toLowerCase().replace(/ /g, "-"),
+          category: row.category || "mixte",
+          tier: "classic",
+          is_active: true,
+          image_url: "/catalogues/placeholder.webp",
+          stock: inv?.stock ?? fallbackStock,
+          low_stock_threshold: inv?.low_stock_threshold ?? 5,
+          created_at: row.created_at || undefined,
+        };
+      });
+    }
+
+    return (perfumeRows as PerfumeCatalogRow[]).map((row) => {
+      const id = String(row.id ?? "");
+      const inv = inventoryMap.get(id);
       return {
-        id: row.id,
-        name: row.name,
-        slug: row.slug || row.name.toLowerCase().replace(/ /g, '-'),
+        id,
+        name: row.name ?? "Produit",
+        slug: row.slug || (row.name ?? "produit").toLowerCase().replace(/ /g, '-'),
         category: row.gender || "mixte",
         tier: row.tier || "classic",
         is_active: row.is_active ?? true,
         image_url: row.image_url || '/catalogues/placeholder.webp',
-        stock: inv.stock ?? 0,
-        low_stock_threshold: inv.low_stock_threshold ?? 5,
+        stock: inv?.stock ?? 0,
+        low_stock_threshold: inv?.low_stock_threshold ?? 5,
         created_at: row.created_at || undefined,
       };
     });
@@ -178,7 +282,7 @@ export async function fetchOverview(days = 30) {
     let orders: NormalizedOrder[] = [];
     try {
       orders = await fetchOrders({ limit: 1000 });
-    } catch (e) {
+    } catch {
       console.warn("[OS/SERVER] Failed to fetch orders for overview, using empty list");
     }
 

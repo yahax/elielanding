@@ -144,7 +144,7 @@ export function mapShopAndLiveToSettingsModel(
     notificationPreferences,
     toastsEnabled: liveSettings.toastsEnabled,
     soundsEnabled: liveSettings.soundsEnabled,
-    refreshIntervalSec: clamp(liveSettings.refreshIntervalSec, 10, 120),
+    refreshIntervalSec: clamp(liveSettings.refreshIntervalSec, 30, 300),
     warRoom: {
       ...base.warRoom,
       ...persisted?.warRoom,
@@ -182,7 +182,7 @@ export function mapModelToLiveSettings(model: OsSettingsModel): Partial<Notifica
   return {
     toastsEnabled: model.toastsEnabled,
     soundsEnabled: model.soundsEnabled,
-    refreshIntervalSec: clamp(model.refreshIntervalSec, 10, 120),
+    refreshIntervalSec: clamp(model.refreshIntervalSec, 30, 300),
     slaWarningMinutes: clamp(model.warRoom.slaThresholdMinutes, 15, 240),
     warRoomPreference: model.warRoom.preference,
     categoriesEnabled: {

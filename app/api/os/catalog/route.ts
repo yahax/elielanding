@@ -82,7 +82,8 @@ export async function GET() {
     const products = await fetchCatalogProducts();
     return NextResponse.json({ products }, { status: 200 });
   } catch (error) {
-    return toApiErrorResponse(error, "Failed to fetch catalog");
+    console.warn("[API/OS] catalog fallback empty products:", error);
+    return NextResponse.json({ products: [] }, { status: 200 });
   }
 }
 
@@ -91,10 +92,12 @@ export async function POST(req: Request) {
     const actor = await resolveActorFromRequest(req);
     const body = createProductSchema.parse(await req.json());
     const supabase = createServiceSupabaseClient();
+    const productId = randomUUID();
 
     const { data: perfume, error: perfumeError } = await supabase
       .from("perfumes")
       .insert({
+        id: productId,
         name: body.name.trim(),
         gender: body.category?.trim() || "mixte",
         tier: body.tier?.trim() || "classic",

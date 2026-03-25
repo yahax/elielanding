@@ -35,17 +35,11 @@ export function NextBestActionChip({
 }) {
   return (
     <span
+      className="os-chip is-active os-next-action-chip"
       style={{
-        display: "inline-flex",
-        alignItems: "center",
         gap: 6,
-        borderRadius: 999,
-        border: "1px solid var(--gold-border)",
-        background: "var(--gold-glow)",
-        color: "var(--gold)",
         padding: compact ? "3px 8px" : "4px 10px",
         fontSize: compact ? 10 : 11,
-        fontWeight: 800,
         whiteSpace: "nowrap",
       }}
     >

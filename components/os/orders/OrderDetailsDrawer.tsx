@@ -3,13 +3,11 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Check,
-  ClipboardPenLine,
   MapPin,
   MessageCircle,
   Phone,
   RotateCcw,
   Ship,
-  UserRoundCog,
   X,
   XCircle,
 } from "lucide-react";
@@ -18,6 +16,7 @@ import { NextBestActionChip } from "@/components/os/orders/NextBestActionChip";
 import { PriorityScoreBadge } from "@/components/os/orders/PriorityScoreBadge";
 import { RiskScoreBadge } from "@/components/os/orders/RiskScoreBadge";
 import { SlaTimer } from "@/components/os/orders/SlaTimer";
+import { DrawerHeader, DrawerSection } from "@/components/ui/DrawerPrimitives";
 import {
   formatCurrencyMAD,
   formatDateTime,
@@ -27,6 +26,7 @@ import {
 } from "@/lib/os/orders/helpers/format";
 import type { EnrichedOrder } from "@/lib/os/orders/types";
 import type { OrderStatus } from "@/lib/types";
+import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 function ActionButton({
@@ -67,6 +67,7 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
+      className={`os-drawer-action-btn is-${tone}`}
       style={{
         borderRadius: 12,
         padding: "10px 12px",
@@ -87,7 +88,7 @@ function ActionButton({
 }
 
 export function OrderDetailsDrawer({
-  order,
+  order: orderProp,
   isOpen,
   onClose,
   onUpdateStatus,
@@ -107,15 +108,43 @@ export function OrderDetailsDrawer({
   availableOperators: string[];
   auditTimeline?: Array<{ id: string; at: string; label: string; description?: string }>;
 }) {
-  if (order == null) return null;
+  const currentOrder = orderProp;
 
-  const waLink = whatsappHref(order.phone);
-  const callLink = phoneHref(order.phone);
-  const timeline = [...order.timeline, ...auditTimeline.map((item) => ({ ...item, kind: "system" as const }))].sort((a, b) => {
-    const aDate = new Date(a.at).getTime();
-    const bDate = new Date(b.at).getTime();
-    return bDate - aDate;
-  });
+  const [noteDraft, setNoteDraft] = useState("");
+  const [operatorDraft, setOperatorDraft] = useState("");
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [operatorSaving, setOperatorSaving] = useState(false);
+
+  const waLink = whatsappHref(currentOrder?.phone ?? null);
+  const callLink = phoneHref(currentOrder?.phone ?? null);
+  const operatorOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [currentOrder?.operator || "", ...availableOperators]
+            .map((value) => value.trim())
+            .filter((value) => value.length > 0)
+        )
+      ),
+    [availableOperators, currentOrder?.operator]
+  );
+  const timeline = useMemo(() => {
+    if (!currentOrder) return [];
+    return [...currentOrder.timeline, ...auditTimeline.map((item) => ({ ...item, kind: "system" as const }))].sort((a, b) => {
+      const aDate = new Date(a.at).getTime();
+      const bDate = new Date(b.at).getTime();
+      return bDate - aDate;
+    });
+  }, [auditTimeline, currentOrder]);
+
+  useEffect(() => {
+    if (!isOpen || !currentOrder) return;
+    setNoteDraft("");
+    setOperatorDraft(currentOrder.operator || "");
+  }, [currentOrder, isOpen]);
+
+  if (currentOrder == null) return null;
+  const order = currentOrder;
 
   return (
     <AnimatePresence mode="wait">
@@ -123,6 +152,7 @@ export function OrderDetailsDrawer({
         <div style={{ position: "fixed", inset: 0, zIndex: 90 }}>
           <motion.button
             type="button"
+            className="os-drawer-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -141,42 +171,30 @@ export function OrderDetailsDrawer({
               top: 0,
               bottom: 0,
               width: "min(96vw, 560px)",
-              background: "var(--bg)",
-              borderLeft: "1px solid var(--border)",
               display: "flex",
               flexDirection: "column",
             }}
+            className="os-drawer os-order-drawer"
           >
-            <div
-              style={{
-                padding: "18px 18px 14px",
-                borderBottom: "1px solid var(--border)",
-                background: "var(--surface)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                gap: 10,
-              }}
-            >
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 900, color: "var(--text-dim)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                  Commande #{order.id.slice(-8).toUpperCase()}
-                </div>
-                <h3 style={{ margin: "4px 0 0", fontSize: 23, lineHeight: 1.1, fontWeight: 900, color: "var(--text)" }}>{order.customer_name || "Client inconnu"}</h3>
-                <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <DrawerHeader
+              eyebrow={`Commande #${order.id.slice(-8).toUpperCase()}`}
+              title={order.customer_name || "Client inconnu"}
+              subtitle={
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <StatusBadge status={order.status} />
                   <PriorityScoreBadge priority={order.priority} score={order.priorityScore} compact />
                   <RiskScoreBadge risk={order.risk} score={order.riskScore} compact />
                 </div>
-              </div>
+              }
+              actions={
+                <button type="button" className="btn-ghost btn-sm" onClick={onClose} style={{ width: 34, height: 34, padding: 0 }}>
+                  <X size={15} />
+                </button>
+              }
+            />
 
-              <button type="button" className="btn-ghost btn-sm" onClick={onClose} style={{ width: 34, height: 34, padding: 0 }}>
-                <X size={15} />
-              </button>
-            </div>
-
-            <div style={{ padding: 16, overflowY: "auto", display: "flex", flexDirection: "column", gap: 14 }}>
-              <div className="luxury-card" style={{ padding: 14, borderRadius: 14 }}>
+            <div className="os-drawer-body">
+              <DrawerSection>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 800, color: "var(--text-dim)", marginBottom: 4 }}>Téléphone</div>
@@ -201,10 +219,9 @@ export function OrderDetailsDrawer({
                   {order.address || "Adresse non renseignée"}
                 </div>
                 <div style={{ marginTop: 8, color: "var(--text-dim)", fontSize: 11, fontWeight: 700 }}>{formatDateTime(order.created_at)}</div>
-              </div>
+              </DrawerSection>
 
-              <div className="luxury-card" style={{ padding: 14, borderRadius: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 900, color: "var(--text)", marginBottom: 8 }}>Smart Intelligence</div>
+              <DrawerSection title="Smart Intelligence">
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
                   <NextBestActionChip action={order.nextBestAction} />
                   <SlaTimer elapsedMinutes={order.elapsedMinutes} slaMinutes={order.slaMinutes} level={order.slaLevel} />
@@ -223,10 +240,9 @@ export function OrderDetailsDrawer({
                     <div style={{ fontSize: 16, fontWeight: 900, color: "var(--text)" }}>{order.attemptCount}</div>
                   </div>
                 </div>
-              </div>
+              </DrawerSection>
 
-              <div className="luxury-card" style={{ padding: 14, borderRadius: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 900, color: "var(--text)", marginBottom: 8 }}>Produits / Pack</div>
+              <DrawerSection title="Produits / Pack">
                 <div style={{ display: "inline-flex", padding: "4px 10px", borderRadius: 999, border: "1px solid var(--gold-border)", background: "var(--gold-glow)", color: "var(--gold)", fontWeight: 900, fontSize: 10, textTransform: "uppercase", marginBottom: 8 }}>
                   Pack {order.pack_type}
                 </div>
@@ -237,10 +253,9 @@ export function OrderDetailsDrawer({
                     </div>
                   ))}
                 </div>
-              </div>
+              </DrawerSection>
 
-              <div className="luxury-card" style={{ padding: 14, borderRadius: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 900, color: "var(--text)", marginBottom: 8 }}>Timeline</div>
+              <DrawerSection title="Timeline">
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {timeline.map((item) => (
                     <div key={item.id} style={{ borderLeft: "2px solid var(--border)", paddingLeft: 10 }}>
@@ -250,10 +265,9 @@ export function OrderDetailsDrawer({
                     </div>
                   ))}
                 </div>
-              </div>
+              </DrawerSection>
 
-              <div className="luxury-card" style={{ padding: 14, borderRadius: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 900, color: "var(--text)", marginBottom: 8 }}>Historique commandes client</div>
+              <DrawerSection title="Historique commandes client">
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {customerHistory.slice(0, 6).map((historyOrder) => (
                     <div key={historyOrder.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, border: "1px solid var(--border)", borderRadius: 10, padding: "8px 10px" }}>
@@ -268,10 +282,10 @@ export function OrderDetailsDrawer({
                     </div>
                   ))}
                 </div>
-              </div>
+              </DrawerSection>
             </div>
 
-            <div style={{ borderTop: "1px solid var(--border)", background: "var(--surface)", padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="os-drawer-footer" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
                 <ActionButton label="Confirmer" icon={<Check size={13} />} tone="success" onClick={() => onUpdateStatus(order.id, "confirmed")} />
                 <ActionButton label="Callback" icon={<RotateCcw size={13} />} tone="warning" onClick={() => onUpdateStatus(order.id, "callback")} />
@@ -296,40 +310,92 @@ export function OrderDetailsDrawer({
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
-                <ActionButton
-                  label="Ajouter note"
-                  icon={<ClipboardPenLine size={13} />}
-                  onClick={() => {
-                    const note = window.prompt("Ajouter une note interne");
-                    if (note && note.trim() !== "") onAddNote(order.id, note.trim());
-                  }}
-                />
-                <ActionButton
-                  label="Réassigner"
-                  icon={<UserRoundCog size={13} />}
-                  onClick={() => {
-                    const current = order.operator || "";
-                    const suggestion = availableOperators.filter((value) => value !== current).slice(0, 5).join(", ");
-                    const operator = window.prompt(`Choisir opérateur (${suggestion})`, current);
-                    if (operator && operator.trim() !== "") onAssignOperator(order.id, operator.trim());
-                  }}
-                />
-                <div
-                  style={{
-                    borderRadius: 12,
-                    border: "1px dashed var(--border)",
-                    padding: "8px 10px",
-                    fontSize: 11,
-                    color: "var(--text-dim)",
-                    fontWeight: 700,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    textAlign: "center",
-                  }}
+              <div
+                style={{
+                  borderRadius: 12,
+                  border: "1px dashed var(--border)",
+                  padding: "8px 10px",
+                  fontSize: 11,
+                  color: "var(--text-dim)",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
+                }}
                 >
                   SLA {formatElapsedMinutes(order.slaMinutes)}
+                </div>
+
+              <div className="os-drawer-section" style={{ padding: 10, display: "grid", gap: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 900, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Note interne
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input
+                    className="filter-input"
+                    type="text"
+                    value={noteDraft}
+                    onChange={(event) => setNoteDraft(event.target.value)}
+                    placeholder="Ajouter une note opérateur..."
+                    style={{ height: 38, flex: 1, minWidth: 0 }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    disabled={noteSaving || noteDraft.trim() === ""}
+                    onClick={async () => {
+                      const normalized = noteDraft.trim();
+                      if (normalized === "") return;
+                      setNoteSaving(true);
+                      try {
+                        await Promise.resolve(onAddNote(order.id, normalized));
+                        setNoteDraft("");
+                      } finally {
+                        setNoteSaving(false);
+                      }
+                    }}
+                  >
+                    {noteSaving ? "Ajout..." : "Ajouter note"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="os-drawer-section" style={{ padding: 10, display: "grid", gap: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 900, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Assignation opérateur
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <select
+                    className="filter-select"
+                    value={operatorDraft}
+                    onChange={(event) => setOperatorDraft(event.target.value)}
+                    style={{ height: 38, flex: 1, minWidth: 0 }}
+                  >
+                    <option value="">Choisir opérateur</option>
+                    {operatorOptions.map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="btn-ghost btn-sm"
+                    disabled={operatorSaving || operatorDraft.trim() === ""}
+                    onClick={async () => {
+                      const normalized = operatorDraft.trim();
+                      if (normalized === "") return;
+                      setOperatorSaving(true);
+                      try {
+                        await Promise.resolve(onAssignOperator(order.id, normalized));
+                      } finally {
+                        setOperatorSaving(false);
+                      }
+                    }}
+                  >
+                    {operatorSaving ? "Assign..." : "Assigner"}
+                  </button>
                 </div>
               </div>
             </div>

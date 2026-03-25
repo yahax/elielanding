@@ -1,30 +1,15 @@
 "use client";
 
-import type { OrderFiltersState, OrderFilterOptions, OrderPriority, OrderRisk } from "@/lib/os/orders/types";
+import type { OrderFilterOptions, OrderFiltersState, OrderPriority, OrderRisk } from "@/lib/os/orders/types";
 import { PRIORITY_LABELS, RISK_LABELS } from "@/lib/os/orders/helpers/status";
 import { STATUS_LABELS, STATUS_LIST } from "@/lib/types";
 import { RotateCcw, SlidersHorizontal, X } from "lucide-react";
-import type { CSSProperties } from "react";
+import { FilterChip } from "@/components/ui/FilterChip";
+import { FilterField, FilterFieldLabel } from "@/components/ui/FilterBar";
 
 function toggleValue<T extends string>(arr: T[], value: T): T[] {
   if (arr.includes(value)) return arr.filter((item) => item !== value);
   return [...arr, value];
-}
-
-function chipStyle(active: boolean): CSSProperties {
-  if (active) {
-    return {
-      background: "var(--gold-glow)",
-      color: "var(--gold)",
-      border: "1px solid var(--gold-border)",
-    };
-  }
-
-  return {
-    background: "var(--surface)",
-    color: "var(--text-muted)",
-    border: "1px solid var(--border)",
-  };
 }
 
 interface ActiveChip {
@@ -145,7 +130,7 @@ export function OrdersFilters({
   }
 
   return (
-    <div className="luxury-card" style={{ padding: compact ? 14 : 16, borderRadius: 20 }}>
+    <div className="luxury-card os-card-subtle" style={{ padding: compact ? 14 : 16, borderRadius: 20 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text)", fontWeight: 800, fontSize: 13 }}>
           <SlidersHorizontal size={14} />
@@ -157,9 +142,9 @@ export function OrdersFilters({
         </button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "repeat(4, minmax(0, 1fr))", gap: 10 }}>
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: "var(--text-dim)" }}>Ville</span>
+      <div className="os-filter-grid" style={compact ? { gridTemplateColumns: "1fr" } : undefined}>
+        <FilterField>
+          <FilterFieldLabel>Ville</FilterFieldLabel>
           <select
             className="filter-select"
             value=""
@@ -176,10 +161,10 @@ export function OrdersFilters({
               </option>
             ))}
           </select>
-        </label>
+        </FilterField>
 
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: "var(--text-dim)" }}>Source</span>
+        <FilterField>
+          <FilterFieldLabel>Source</FilterFieldLabel>
           <select
             className="filter-select"
             value=""
@@ -196,10 +181,10 @@ export function OrdersFilters({
               </option>
             ))}
           </select>
-        </label>
+        </FilterField>
 
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: "var(--text-dim)" }}>Pack / Produit</span>
+        <FilterField>
+          <FilterFieldLabel>Pack / Produit</FilterFieldLabel>
           <select
             className="filter-select"
             value=""
@@ -227,10 +212,10 @@ export function OrdersFilters({
               </option>
             ))}
           </select>
-        </label>
+        </FilterField>
 
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: "var(--text-dim)" }}>Opérateur</span>
+        <FilterField>
+          <FilterFieldLabel>Opérateur</FilterFieldLabel>
           <select
             className="filter-select"
             value=""
@@ -247,60 +232,37 @@ export function OrdersFilters({
               </option>
             ))}
           </select>
-        </label>
+        </FilterField>
       </div>
 
-      <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {STATUS_LIST.map((status) => {
-          const active = filters.statuses.includes(status);
-          return (
-            <button
-              type="button"
-              key={status}
-              onClick={() => onChange({ ...filters, statuses: toggleValue(filters.statuses, status) })}
-              style={{
-                borderRadius: 999,
-                padding: "5px 10px",
-                fontSize: 11,
-                fontWeight: 800,
-                cursor: "pointer",
-                ...chipStyle(active),
-              }}
-            >
-              {STATUS_LABELS[status]}
-            </button>
-          );
-        })}
+      <div className="os-filter-chip-grid">
+        {STATUS_LIST.map((status) => (
+          <FilterChip
+            key={status}
+            label={STATUS_LABELS[status]}
+            active={filters.statuses.includes(status)}
+            onClick={() => onChange({ ...filters, statuses: toggleValue(filters.statuses, status) })}
+          />
+        ))}
       </div>
 
-      <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {(Object.keys(PRIORITY_LABELS) as OrderPriority[]).map((priority) => {
-          const active = filters.priorities.includes(priority);
-          return (
-            <button
-              type="button"
-              key={priority}
-              onClick={() => onChange({ ...filters, priorities: toggleValue(filters.priorities, priority) })}
-              style={{ borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 800, cursor: "pointer", ...chipStyle(active) }}
-            >
-              Priorité {PRIORITY_LABELS[priority]}
-            </button>
-          );
-        })}
-
-        {(Object.keys(RISK_LABELS) as OrderRisk[]).map((risk) => {
-          const active = filters.risks.includes(risk);
-          return (
-            <button
-              type="button"
-              key={risk}
-              onClick={() => onChange({ ...filters, risks: toggleValue(filters.risks, risk) })}
-              style={{ borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 800, cursor: "pointer", ...chipStyle(active) }}
-            >
-              Risque {RISK_LABELS[risk]}
-            </button>
-          );
-        })}
+      <div className="os-filter-chip-grid">
+        {(Object.keys(PRIORITY_LABELS) as OrderPriority[]).map((priority) => (
+          <FilterChip
+            key={priority}
+            label={`Priorité ${PRIORITY_LABELS[priority]}`}
+            active={filters.priorities.includes(priority)}
+            onClick={() => onChange({ ...filters, priorities: toggleValue(filters.priorities, priority) })}
+          />
+        ))}
+        {(Object.keys(RISK_LABELS) as OrderRisk[]).map((risk) => (
+          <FilterChip
+            key={risk}
+            label={`Risque ${RISK_LABELS[risk]}`}
+            active={filters.risks.includes(risk)}
+            onClick={() => onChange({ ...filters, risks: toggleValue(filters.risks, risk) })}
+          />
+        ))}
       </div>
 
       <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: compact ? "1fr" : "repeat(4, minmax(0, 1fr))", gap: 10 }}>
@@ -317,7 +279,6 @@ export function OrdersFilters({
           />
           Nouveaux clients
         </label>
-
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700, color: "var(--text-muted)" }}>
           <input
             type="checkbox"
@@ -331,17 +292,14 @@ export function OrdersFilters({
           />
           Clients récurrents
         </label>
-
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700, color: "var(--text-muted)" }}>
           <input type="checkbox" checked={filters.onlyHighValue} onChange={() => onChange({ ...filters, onlyHighValue: !filters.onlyHighValue })} />
           Forte valeur
         </label>
-
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700, color: "var(--text-muted)" }}>
           <input type="checkbox" checked={filters.onlyAtRisk} onChange={() => onChange({ ...filters, onlyAtRisk: !filters.onlyAtRisk })} />
           Risque annulation
         </label>
-
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700, color: "var(--text-muted)" }}>
           <input type="checkbox" checked={filters.onlyUrgent} onChange={() => onChange({ ...filters, onlyUrgent: !filters.onlyUrgent })} />
           Urgences SLA
@@ -349,8 +307,8 @@ export function OrdersFilters({
       </div>
 
       <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: compact ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 10 }}>
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: "var(--text-dim)" }}>Période</span>
+        <FilterField>
+          <FilterFieldLabel>Période</FilterFieldLabel>
           <select
             className="filter-select"
             value={filters.datePreset}
@@ -363,10 +321,9 @@ export function OrdersFilters({
             <option value="90d">90 jours</option>
             <option value="all">Tout</option>
           </select>
-        </label>
-
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: "var(--text-dim)" }}>Du</span>
+        </FilterField>
+        <FilterField>
+          <FilterFieldLabel>Du</FilterFieldLabel>
           <input
             type="date"
             className="filter-input"
@@ -374,10 +331,9 @@ export function OrdersFilters({
             onChange={(event) => onChange({ ...filters, fromDate: event.target.value || null })}
             style={{ minWidth: 0, height: 40 }}
           />
-        </label>
-
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: "var(--text-dim)" }}>Au</span>
+        </FilterField>
+        <FilterField>
+          <FilterFieldLabel>Au</FilterFieldLabel>
           <input
             type="date"
             className="filter-input"
@@ -385,27 +341,13 @@ export function OrdersFilters({
             onChange={(event) => onChange({ ...filters, toDate: event.target.value || null })}
             style={{ minWidth: 0, height: 40 }}
           />
-        </label>
+        </FilterField>
       </div>
 
       {activeChips.length > 0 ? (
-        <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <div className="os-filter-chip-grid" style={{ marginTop: 12 }}>
           {activeChips.map((chip) => (
-            <span
-              key={chip.id}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                borderRadius: 999,
-                padding: "4px 10px",
-                background: "var(--surface-2)",
-                border: "1px solid var(--border)",
-                fontSize: 11,
-                fontWeight: 700,
-                color: "var(--text-muted)",
-              }}
-            >
+            <span key={chip.id} className="os-chip">
               {chip.label}
               <button
                 type="button"
@@ -421,3 +363,4 @@ export function OrdersFilters({
     </div>
   );
 }
+

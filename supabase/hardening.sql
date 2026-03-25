@@ -43,7 +43,7 @@ CREATE OR REPLACE FUNCTION create_order_secure(
 DECLARE
     v_order_id UUID;
     v_perfume_name TEXT;
-    v_perfume_id UUID;
+    v_perfume_id TEXT;
     v_existing_order_id UUID;
     v_idempotency_key TEXT;
     v_has_perfume_inventory BOOLEAN := to_regclass('public.inventory') IS NOT NULL AND to_regclass('public.perfumes') IS NOT NULL;

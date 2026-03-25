@@ -3,7 +3,6 @@ import { z } from "zod";
 import { ordersRepository } from "@/lib/os/orders/repositories/orders-repository";
 import { fetchCatalogProducts } from "@/lib/os/server";
 import { buildAnalyticsBundle } from "@/lib/os/analytics/server/snapshots";
-import { toApiErrorResponse } from "@/lib/os/orders/server/http";
 
 const querySchema = z.object({
   days: z.coerce.number().int().min(1).max(365).optional(),

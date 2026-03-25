@@ -17,6 +17,7 @@ export function MobileWarRoomPanel({
 
   return (
     <section
+      className="os-mobile-war-room"
       style={{
         borderRadius: 16,
         border: isWarRoomMode ? "1px solid rgba(201,106,106,0.38)" : "1px solid var(--border)",

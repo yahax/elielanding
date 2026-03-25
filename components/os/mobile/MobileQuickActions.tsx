@@ -74,11 +74,12 @@ export function MobileQuickActions({
   ];
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+    <div className="os-mobile-quick-actions" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
       {actions.map((action) => (
         <Link
           key={action.id}
           href={action.href}
+          className="os-mobile-quick-action"
           style={{
             borderRadius: 12,
             textDecoration: "none",

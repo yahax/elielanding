@@ -1,6 +1,17 @@
 "use client";
 
 import { Filter, Layers, RefreshCw, Save, Search, Users } from "lucide-react";
+import {
+  FilterBar,
+  FilterBarActions,
+  FilterBarChips,
+  FilterBarMeta,
+  FilterBarRow,
+  FilterBarSearch,
+  FilterBarTitle,
+  FilterBarTop,
+} from "@/components/ui/FilterBar";
+import { FilterChip } from "@/components/ui/FilterChip";
 
 interface QuickFilterAction {
   id: string;
@@ -39,91 +50,69 @@ export function OrdersCommandBar({
   isMobile: boolean;
 }) {
   return (
-    <div
-      className="luxury-card"
-      style={{
-        padding: isMobile ? 14 : 18,
-        borderRadius: 20,
-        position: "sticky",
-        top: 0,
-        zIndex: 35,
-        background: "rgba(255,255,255,0.94)",
-        backdropFilter: "blur(10px)",
-      }}
-    >
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <h2 style={{ margin: 0, fontSize: isMobile ? 19 : 22, fontWeight: 900, color: "var(--text)" }}>Orders Execution Desk</h2>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-muted)", fontSize: 12, fontWeight: 700 }}>
+    <FilterBar sticky className="os-card-subtle os-orders-commandbar">
+      <FilterBarTop>
+        <div>
+          <FilterBarTitle>Orders Execution Desk</FilterBarTitle>
+          <FilterBarMeta>
             <Layers size={13} />
             {filteredCount} commandes visibles
-          </div>
+          </FilterBarMeta>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <FilterBarActions>
           {isMobile ? (
-            <button type="button" className="btn-ghost btn-sm" onClick={onOpenMobileFilters}>
+            <button type="button" className="btn-ghost btn-sm os-toolbar-btn" onClick={onOpenMobileFilters}>
               <Filter size={14} />
               Filtres
             </button>
           ) : null}
 
-          <button type="button" className="btn-ghost btn-sm" onClick={onOpenSavedViews}>
+          <button type="button" className="btn-ghost btn-sm os-toolbar-btn" onClick={onOpenSavedViews}>
             <Layers size={14} />
             Vues
           </button>
-          <button type="button" className="btn-ghost btn-sm" onClick={onSaveCurrentView}>
+          <button type="button" className="btn-ghost btn-sm os-toolbar-btn" onClick={onSaveCurrentView}>
             <Save size={14} />
             Sauver vue
           </button>
-          <button type="button" className="btn-ghost btn-sm" onClick={onRefresh}>
+          <button type="button" className="btn-ghost btn-sm os-toolbar-btn" onClick={onRefresh}>
             <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
             Refresh
           </button>
 
           {hasSelection ? (
-            <button type="button" className="btn btn-primary btn-sm" onClick={onOpenBulkActions}>
+            <button type="button" className="btn btn-primary btn-sm os-toolbar-btn" onClick={onOpenBulkActions}>
               <Users size={14} />
               Bulk ({selectionCount})
             </button>
           ) : null}
-        </div>
-      </div>
+        </FilterBarActions>
+      </FilterBarTop>
 
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "minmax(320px, 1fr) auto", gap: 12, marginTop: 12 }}>
-        <div style={{ position: "relative" }}>
-          <Search size={15} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
+      <FilterBarRow>
+        <FilterBarSearch>
+          <Search size={15} />
           <input
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            className="filter-input"
+            className="filter-input os-toolbar-search-input"
             placeholder="Recherche rapide: client, téléphone, ville, commande..."
-            style={{ width: "100%", height: 44, borderRadius: 12, paddingLeft: 40 }}
+            style={{ height: 44 }}
           />
-        </div>
+        </FilterBarSearch>
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            overflowX: "auto",
-            paddingBottom: 2,
-          }}
-        >
+        <FilterBarChips>
           {quickFilters.map((quickFilter) => (
-            <button
-              type="button"
+            <FilterChip
               key={quickFilter.id}
+              label={quickFilter.label}
+              active={quickFilter.active}
               onClick={quickFilter.onClick}
-              className={quickFilter.active ? "btn btn-primary btn-sm" : "btn-ghost btn-sm"}
-              style={{ borderRadius: 999, whiteSpace: "nowrap", padding: "0 14px", height: 38 }}
-            >
-              {quickFilter.label}
-            </button>
+            />
           ))}
-        </div>
-      </div>
-    </div>
+        </FilterBarChips>
+      </FilterBarRow>
+    </FilterBar>
   );
 }

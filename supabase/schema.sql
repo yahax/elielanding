@@ -89,22 +89,7 @@ CREATE INDEX idx_orders_status ON orders (status);
 CREATE INDEX idx_orders_created ON orders (created_at DESC);
 
 -- ============================================================
--- 5. ORDER_ITEMS (The 6 perfumes)
--- ============================================================
-CREATE TABLE order_items (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    order_id        UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-    product_id      UUID REFERENCES products(id) ON DELETE SET NULL,
-    perfume_name    TEXT NOT NULL, -- Name snapshot
-    position        INT NOT NULL,   -- 1 to 6
-    is_gift         BOOLEAN NOT NULL DEFAULT false,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX idx_items_order ON order_items (order_id);
-
--- ============================================================
--- 6. EVENTS (Audit & Analytics)
+-- 5. EVENTS (Audit & Analytics)
 -- ============================================================
 CREATE TABLE events (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -116,13 +101,12 @@ CREATE TABLE events (
 );
 
 -- ============================================================
--- 7. ROW LEVEL SECURITY
+-- 6. ROW LEVEL SECURITY
 -- ============================================================
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 
 -- Polices simplified (Admins can do everything)
@@ -131,11 +115,10 @@ CREATE POLICY "Auth access" ON profiles FOR ALL USING (auth.role() = 'authentica
 CREATE POLICY "Auth products" ON products FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Auth customers" ON customers FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Auth orders" ON orders FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Auth order_items" ON order_items FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Auth events" ON events FOR ALL USING (auth.role() = 'authenticated');
 
 -- ============================================================
--- 8. FUNCTIONS & RPC
+-- 7. FUNCTIONS & RPC
 -- ============================================================
 
 -- Safely decrement stock by product name

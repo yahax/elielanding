@@ -42,6 +42,12 @@ type OsLiveState = {
   setWarRoomPreference: (preference: WarRoomPreference) => void;
 };
 
+function clampRefreshIntervalSec(value: number | undefined): number {
+  const parsed = Number(value ?? 30);
+  if (!Number.isFinite(parsed)) return 30;
+  return Math.min(300, Math.max(30, Math.round(parsed)));
+}
+
 function sortByDateDesc<T extends { createdAt: string }>(items: T[]): T[] {
   return [...items].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
@@ -123,7 +129,11 @@ export const useOsLiveStore = create<OsLiveState>()(
         })),
       updateSettings: (patch) =>
         set((state) => {
-          const next = { ...state.settings, ...patch };
+          const next = {
+            ...state.settings,
+            ...patch,
+            refreshIntervalSec: clampRefreshIntervalSec(patch.refreshIntervalSec ?? state.settings.refreshIntervalSec),
+          };
           return {
             ...state,
             settings: next,

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
@@ -22,6 +22,7 @@ import {
 import { buildOrderFilterOptions, buildOrdersSummaryStats, enrichOrders, applyOrderFilters, sortOrders } from "@/lib/os/orders/helpers/scoring";
 import { phoneHref, whatsappHref } from "@/lib/os/orders/helpers/format";
 import { loadOpsMeta, loadSavedViews, saveOpsMeta, saveSavedViews } from "@/lib/os/orders/helpers/storage";
+import { extractOpsMetaFromOrders } from "@/lib/os/orders/helpers/ops-meta";
 import {
   DEFAULT_OPERATORS,
   DEFAULT_ORDER_FILTERS_STATE,
@@ -33,7 +34,7 @@ import {
   type SortDirection,
   type SummaryMetricKey,
 } from "@/lib/os/orders/types";
-import { STATUS_LIST, type OrderStatus } from "@/lib/types";
+import { normalizeOrderStatus, STATUS_LIST, type OrderStatus } from "@/lib/types";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { OsToaster } from "@/components/ui/OsToaster";
 import { EmptyState, LoadingState } from "@/components/ui/States";
@@ -46,6 +47,7 @@ import { MobileOrderCard, type MobileOrderAction } from "@/components/os/orders/
 import { MobileOrderActionBar } from "@/components/os/orders/MobileOrderActionBar";
 import { MobileOrdersFiltersDrawer } from "@/components/os/orders/MobileOrdersFiltersDrawer";
 import { OrderDetailsDrawer } from "@/components/os/orders/OrderDetailsDrawer";
+import { SaveViewDialog } from "@/components/os/orders/SaveViewDialog";
 import { MobileUrgencyBanner } from "@/components/os/mobile/MobileUrgencyBanner";
 import { MobileOrdersQueue } from "@/components/os/mobile/MobileOrdersQueue";
 import { MobileWarRoomPanel } from "@/components/os/mobile/MobileWarRoomPanel";
@@ -61,6 +63,11 @@ type DrawerAuditItem = {
   label: string;
   description?: string;
 };
+
+const INITIAL_RENDER_DESKTOP = 80;
+const INITIAL_RENDER_MOBILE = 24;
+const RENDER_STEP_DESKTOP = 80;
+const RENDER_STEP_MOBILE = 24;
 
 function patchOrderStatus(order: NormalizedOrder, nextStatus: OrderStatus): NormalizedOrder {
   const now = new Date().toISOString();
@@ -103,45 +110,28 @@ function buildSummaryScopeFilters(filters: OrderFiltersState): OrderFiltersState
   };
 }
 
-function parseStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.map((item) => String(item).trim()).filter((item) => item.length > 0);
-}
-
-function parseStringValue(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function extractOpsMetaFromOrders(orders: NormalizedOrder[]): OrderOperationalMetaMap {
-  const result: OrderOperationalMetaMap = {};
-
-  for (const order of orders) {
-    const meta = order.meta;
-    if (meta == null || typeof meta !== "object") continue;
-
-    const rawOs = "os" in meta ? (meta.os as Record<string, unknown>) : null;
-    if (!rawOs || typeof rawOs !== "object") continue;
-
-    result[order.id] = {
-      operator: parseStringValue(rawOs.assignedOperatorName),
-      tags: parseStringArray(rawOs.tags),
-      notes: parseStringArray(rawOs.notes),
-      callbackCount: Number(rawOs.callbackCount ?? 0),
-      attemptCount: Number(rawOs.attemptCount ?? 0),
-      archived: rawOs.archived === true,
-      lastTouchAt: parseStringValue(rawOs.lastTouchAt),
-      assignedAt: parseStringValue(rawOs.assignedAt),
-    };
-  }
-
-  return result;
-}
-
 function mapDeepLinkToOrderFilters(parsed: OrdersDeepLinkFilters): Partial<OrderFiltersState> {
   const statusSet = new Set(STATUS_LIST);
-  const statuses = (parsed.statuses ?? []).filter((status): status is OrderStatus => statusSet.has(status as OrderStatus));
+  const acceptedStatusValues = new Set([
+    "new",
+    "pending",
+    "to_confirm",
+    "confirmed",
+    "callback",
+    "cancelled",
+    "canceled",
+    "shipped",
+    "delivered",
+  ]);
+  const statuses = Array.from(
+    new Set(
+      (parsed.statuses ?? [])
+        .map((status) => status.trim().toLowerCase())
+        .filter((status) => acceptedStatusValues.has(status))
+        .map((status) => normalizeOrderStatus(status))
+        .filter((status): status is OrderStatus => statusSet.has(status))
+    )
+  );
   const hasUrgentStatusAlias = (parsed.statuses ?? []).includes("urgent");
 
   return {
@@ -241,15 +231,26 @@ function OrdersPageInner() {
   const [opsMeta, setOpsMeta] = useState<OrderOperationalMetaMap>({});
   const [savedViews, setSavedViews] = useState<OrderSavedView[]>([]);
   const [savedViewsOpen, setSavedViewsOpen] = useState(false);
+  const [saveViewDialogOpen, setSaveViewDialogOpen] = useState(false);
+  const [saveViewName, setSaveViewName] = useState("");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [updatingIds, setUpdatingIds] = useState<string[]>([]);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [drawerAuditTimeline, setDrawerAuditTimeline] = useState<DrawerAuditItem[]>([]);
   const [nowTs, setNowTs] = useState<number>(Date.now());
+  const [renderCount, setRenderCount] = useState<number>(INITIAL_RENDER_DESKTOP);
   const hasLoadedRef = useRef(false);
   const lastQueryRef = useRef<string>("");
 
   const now = useMemo(() => new Date(nowTs), [nowTs]);
+  const deferredSearch = useDeferredValue(filters.search);
+  const effectiveFilters = useMemo(
+    () => ({
+      ...filters,
+      search: deferredSearch,
+    }),
+    [deferredSearch, filters]
+  );
 
   useEffect(() => {
     setOpsMeta(loadOpsMeta());
@@ -292,7 +293,7 @@ function OrdersPageInner() {
     }
 
     try {
-      const { orders: fetched } = await fetchOrders({ limit: 1000, days: 120 });
+      const { orders: fetched } = await fetchOrders({ limit: 300, days: 120 });
       setOrders(fetched);
       setOpsMeta((prev) => {
         const next = {
@@ -321,6 +322,10 @@ function OrdersPageInner() {
     const validIds = new Set(orders.map((order) => order.id));
     setSelectedIds((prev) => prev.filter((id) => validIds.has(id)));
   }, [orders]);
+
+  useEffect(() => {
+    setRenderCount(isMobile ? INITIAL_RENDER_MOBILE : INITIAL_RENDER_DESKTOP);
+  }, [isMobile, filters, sort.field, sort.direction]);
 
   useEffect(() => {
     if (!isDrawerOpen || !selectedOrderId) {
@@ -498,53 +503,21 @@ function OrdersPageInner() {
     [opsMeta, upsertOpsMeta]
   );
 
-  const addTagToSelection = useCallback(
-    (tag: string) => {
-      const normalized = tag.trim();
-      if (normalized === "" || selectedIds.length === 0) return;
-
-      upsertOpsMeta((prev) => {
-        const next = { ...prev };
-        for (const id of selectedIds) {
-          const current = next[id] || {};
-          const tags = Array.from(new Set([...(current.tags || []), normalized]));
-          next[id] = { ...current, tags };
-        }
-        return next;
-      });
-      toast.success(`Tag ajouté: ${normalized}`);
-    },
-    [selectedIds, upsertOpsMeta]
-  );
-
-  const archiveSelection = useCallback(() => {
-    if (selectedIds.length === 0) return;
-    if (!window.confirm(`Archiver ${selectedIds.length} commandes ?`)) return;
-
-    upsertOpsMeta((prev) => {
-      const next = { ...prev };
-      for (const id of selectedIds) {
-        const current = next[id] || {};
-        next[id] = { ...current, archived: true };
-      }
-      return next;
-    });
-    setSelectedIds([]);
-    toast.success("Commandes archivées");
-  }, [selectedIds, upsertOpsMeta]);
-
   const enrichedOrders = useMemo(() => enrichOrders(orders, opsMeta, now), [orders, opsMeta, now]);
   const filterOptions = useMemo(() => buildOrderFilterOptions(enrichedOrders), [enrichedOrders]);
   const summaryScope = useMemo(
-    () => applyOrderFilters(enrichedOrders, buildSummaryScopeFilters(filters), now),
-    [enrichedOrders, filters, now]
+    () => applyOrderFilters(enrichedOrders, buildSummaryScopeFilters(effectiveFilters), now),
+    [effectiveFilters, enrichedOrders, now]
   );
   const summaryStats = useMemo(() => buildOrdersSummaryStats(summaryScope, now), [summaryScope, now]);
 
   const filteredOrders = useMemo(() => {
-    const scoped = applyOrderFilters(enrichedOrders, filters, now);
+    const scoped = applyOrderFilters(enrichedOrders, effectiveFilters, now);
     return sortOrders(scoped, sort.field, sort.direction);
-  }, [enrichedOrders, filters, now, sort]);
+  }, [effectiveFilters, enrichedOrders, now, sort]);
+  const renderedOrders = useMemo(() => filteredOrders.slice(0, renderCount), [filteredOrders, renderCount]);
+  const hasMoreRenderedOrders = renderedOrders.length < filteredOrders.length;
+  const remainingOrdersCount = Math.max(filteredOrders.length - renderedOrders.length, 0);
 
   const mobileUrgentQueue = useMemo(
     () =>
@@ -739,13 +712,21 @@ function OrdersPageInner() {
     [applySingleStatus]
   );
 
-  const saveCurrentView = useCallback(() => {
-    const name = window.prompt("Nom de la vue sauvegardée");
-    if (name == null || name.trim() === "") return;
+  const openSaveCurrentViewDialog = useCallback(() => {
+    setSaveViewName("");
+    setSaveViewDialogOpen(true);
+  }, []);
+
+  const confirmSaveCurrentView = useCallback(() => {
+    const normalized = saveViewName.trim();
+    if (normalized === "") {
+      toast.error("Nom de vue requis");
+      return;
+    }
 
     const nextView: OrderSavedView = {
       id: crypto.randomUUID(),
-      name: name.trim(),
+      name: normalized,
       filters,
       createdAt: new Date().toISOString(),
     };
@@ -755,8 +736,10 @@ function OrdersPageInner() {
       saveSavedViews(next);
       return next;
     });
+    setSaveViewDialogOpen(false);
+    setSaveViewName("");
     toast.success("Vue sauvegardée");
-  }, [filters]);
+  }, [filters, saveViewName]);
 
   const deleteSavedView = useCallback((viewId: string) => {
     setSavedViews((prev) => {
@@ -789,7 +772,7 @@ function OrdersPageInner() {
   }
 
   return (
-    <div className="os-page" style={{ paddingBottom: isMobile ? 96 : 24 }}>
+    <div className="os-page os-orders-page" style={{ paddingBottom: isMobile ? 96 : 24 }}>
       <OsToaster />
 
       <OrdersCommandBar
@@ -805,34 +788,34 @@ function OrdersPageInner() {
           if (selectedIds.length === 0) toast("Sélectionnez des commandes d'abord");
         }}
         onOpenSavedViews={() => setSavedViewsOpen((prev) => !prev)}
-        onSaveCurrentView={saveCurrentView}
+        onSaveCurrentView={openSaveCurrentViewDialog}
         onOpenMobileFilters={() => setMobileFiltersOpen(true)}
         isMobile={isMobile}
       />
 
       {savedViewsOpen ? (
-        <div className="luxury-card" style={{ padding: 14, borderRadius: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div style={{ fontSize: 13, fontWeight: 900, color: "var(--text)" }}>Vues sauvegardées</div>
-            <button type="button" className="btn-ghost btn-sm" onClick={saveCurrentView}>
+        <div className="luxury-card os-card-subtle os-saved-views-panel" style={{ padding: 14, borderRadius: 16 }}>
+          <div className="os-saved-views-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div className="os-saved-views-title" style={{ fontSize: 13, fontWeight: 900, color: "var(--text)" }}>Vues sauvegardées</div>
+            <button type="button" className="btn-ghost btn-sm os-saved-views-create" onClick={openSaveCurrentViewDialog}>
               Sauver vue courante
             </button>
           </div>
 
           {savedViews.length === 0 ? (
-            <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 700 }}>Aucune vue enregistrée pour le moment.</div>
+            <div className="os-saved-views-empty" style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 700 }}>Aucune vue enregistrée pour le moment.</div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="os-saved-views-list" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {savedViews.map((view) => (
-                <div key={view.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, border: "1px solid var(--border)", borderRadius: 12, padding: "8px 10px" }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 800, color: "var(--text)", fontSize: 13 }}>{view.name}</div>
-                    <div style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 700 }}>{new Date(view.createdAt).toLocaleString("fr-MA")}</div>
+                <div key={view.id} className="os-card-interactive os-saved-view-item" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, border: "1px solid var(--border)", borderRadius: 12, padding: "8px 10px" }}>
+                  <div className="os-saved-view-main" style={{ minWidth: 0 }}>
+                    <div className="os-saved-view-name" style={{ fontWeight: 800, color: "var(--text)", fontSize: 13 }}>{view.name}</div>
+                    <div className="os-saved-view-date" style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 700 }}>{new Date(view.createdAt).toLocaleString("fr-MA")}</div>
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div className="os-saved-view-actions" style={{ display: "flex", gap: 8 }}>
                     <button
                       type="button"
-                      className="btn-ghost btn-sm"
+                      className="btn-ghost btn-sm os-saved-view-btn"
                       onClick={() => {
                         setFilters(view.filters);
                         setSavedViewsOpen(false);
@@ -841,7 +824,7 @@ function OrdersPageInner() {
                     >
                       Appliquer
                     </button>
-                    <button type="button" className="btn-ghost btn-sm" onClick={() => deleteSavedView(view.id)}>
+                    <button type="button" className="btn-ghost btn-sm os-saved-view-btn" onClick={() => deleteSavedView(view.id)}>
                       Supprimer
                     </button>
                   </div>
@@ -871,7 +854,7 @@ function OrdersPageInner() {
       {filteredOrders.length === 0 ? (
         <EmptyState title="Aucune commande filtrée" copy="Ajustez les filtres ou la recherche pour voir les commandes à traiter." />
       ) : isMobile ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: 80 }}>
+        <div className="os-orders-mobile-list" style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: 80 }}>
           <MobileWarRoomPanel urgentCountHint={mobileUrgentQueue.length}>
             <MobileUrgencyBanner urgentCount={mobileUrgentQueue.length} callbackOverdue={callbackOverdueCount} />
           </MobileWarRoomPanel>
@@ -888,13 +871,13 @@ function OrdersPageInner() {
             }}
           />
 
-          {filteredOrders.map((order) => (
+          {renderedOrders.map((order) => (
             <MobileOrderCard key={order.id} order={order} selected={selectedSet.has(order.id)} onSelect={(id) => setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))} onAction={handleRowAction} />
           ))}
         </div>
       ) : (
         <OrdersTable
-          orders={filteredOrders}
+          orders={renderedOrders}
           selectedIds={selectedSet}
           allSelected={allSelected}
           onToggleSelect={(orderId) =>
@@ -909,6 +892,18 @@ function OrdersPageInner() {
         />
       )}
 
+      {hasMoreRenderedOrders ? (
+        <div className="os-orders-load-more" style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+          <button
+            type="button"
+            className="btn-ghost os-orders-load-more-btn"
+            onClick={() => setRenderCount((prev) => prev + (isMobile ? RENDER_STEP_MOBILE : RENDER_STEP_DESKTOP))}
+          >
+            Afficher plus ({remainingOrdersCount} restantes)
+          </button>
+        </div>
+      ) : null}
+
       {selectedIds.length > 0 ? (
         <BulkActionsBar
           selectedCount={selectedIds.length}
@@ -918,8 +913,14 @@ function OrdersPageInner() {
           onChangeStatus={applyBulkStatus}
           onMarkCallback={() => applyBulkStatus("callback")}
           onExport={exportSelection}
-          onTag={addTagToSelection}
-          onArchive={archiveSelection}
+          onTag={() => {
+            toast("Tagging bulk bientôt disponible");
+          }}
+          onArchive={() => {
+            toast("Archivage bulk bientôt disponible");
+          }}
+          taggingEnabled={false}
+          archivingEnabled={false}
           loading={bulkLoading}
         />
       ) : null}
@@ -933,6 +934,14 @@ function OrdersPageInner() {
           refreshing={refreshing}
         />
       ) : null}
+
+      <SaveViewDialog
+        isOpen={saveViewDialogOpen}
+        name={saveViewName}
+        onNameChange={setSaveViewName}
+        onClose={() => setSaveViewDialogOpen(false)}
+        onConfirm={confirmSaveCurrentView}
+      />
 
       <OrderDetailsDrawer
         order={selectedOrder}
@@ -953,7 +962,7 @@ function OrdersPageInner() {
 
 export default function OrdersPage() {
   return (
-    <Suspense fallback={<div className="os-page" style={{ padding: 32, textAlign: "center", color: "var(--text-dim)" }}>Chargement moteur ordres...</div>}>
+    <Suspense fallback={<div className="os-page os-suspense-state" style={{ padding: 32, textAlign: "center", color: "var(--text-dim)" }}>Chargement moteur ordres...</div>}>
       <OrdersPageInner />
     </Suspense>
   );

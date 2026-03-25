@@ -11,10 +11,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const parsed = querySchema.safeParse(Object.fromEntries(url.searchParams.entries()));
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Search query must be at least 2 characters" },
-        { status: 400 }
-      );
+      return NextResponse.json({ results: [] }, { status: 200 });
     }
 
     const q = parsed.data.q.trim();
@@ -36,10 +33,12 @@ export async function GET(req: Request) {
       ]);
 
     if (ordersError) {
-      return NextResponse.json({ error: ordersError.message, details: ordersError }, { status: 400 });
+      console.warn("[API/OS] search orders fallback empty:", ordersError);
+      return NextResponse.json({ results: [] }, { status: 200 });
     }
     if (perfumesError) {
-      return NextResponse.json({ error: perfumesError.message, details: perfumesError }, { status: 400 });
+      console.warn("[API/OS] search perfumes fallback empty:", perfumesError);
+      return NextResponse.json({ results: [] }, { status: 200 });
     }
 
     const results = [
@@ -65,7 +64,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ results }, { status: 200 });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unable to search";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.warn("[API/OS] search fallback empty:", error);
+    return NextResponse.json({ results: [] }, { status: 200 });
   }
 }

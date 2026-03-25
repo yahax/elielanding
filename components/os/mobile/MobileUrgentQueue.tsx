@@ -13,7 +13,7 @@ export function MobileUrgentQueue({
   const queue = orders.slice(0, 8);
 
   return (
-    <section className="luxury-card" style={{ padding: 12, borderRadius: 14 }}>
+    <section className="luxury-card os-mobile-urgent-card" style={{ padding: 12, borderRadius: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div style={{ fontSize: 12, fontWeight: 900, color: "var(--text)" }}>Mobile Urgent Queue</div>
         <Link href="/os/orders?status=to_confirm" style={{ fontSize: 11, fontWeight: 800, color: "var(--gold)", textDecoration: "none" }}>
@@ -22,13 +22,14 @@ export function MobileUrgentQueue({
       </div>
 
       {queue.length === 0 ? (
-        <div style={{ fontSize: 12, color: "var(--text-dim)", fontWeight: 700, padding: "10px 4px" }}>Aucune urgence active.</div>
+        <div className="os-mobile-queue-empty" style={{ fontSize: 12, color: "var(--text-dim)", fontWeight: 700, padding: "10px 4px" }}>Aucune urgence active.</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {queue.map((order) => (
             <Link
               key={order.id}
               href={`/os/orders?status=${order.status}`}
+              className="os-mobile-urgent-row"
               style={{
                 border: "1px solid rgba(201,106,106,0.28)",
                 borderRadius: 10,

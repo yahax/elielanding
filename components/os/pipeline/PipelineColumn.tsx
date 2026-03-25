@@ -27,45 +27,38 @@ export function PipelineColumn({
   return (
     <section
       ref={setNodeRef}
+      className={`os-pipeline-column ${isOver ? "is-over" : ""}`}
       style={{
-        width: 320,
-        minWidth: 320,
-        borderRadius: 20,
-        border: isOver ? "1px dashed var(--gold)" : "1px solid var(--border)",
-        background: "var(--surface)",
-        display: "flex",
-        flexDirection: "column",
-        transition: "all .2s ease",
-        boxShadow: isOver ? "0 10px 24px rgba(201,168,106,0.16)" : "none",
+        borderStyle: isOver ? "dashed" : "solid",
       }}
     >
-      <div style={{ borderBottom: "1px solid var(--border)", padding: "10px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-          <h3 style={{ margin: 0, fontSize: 12, fontWeight: 900, letterSpacing: "0.09em", textTransform: "uppercase", color: "var(--text)" }}>
+      <div className="os-pipeline-column-head">
+        <div className="os-pipeline-column-title-row">
+          <h3 className="os-pipeline-column-title">
             {STATUS_LABELS[status]}
           </h3>
-          <span style={{ fontSize: 11, fontWeight: 900, borderRadius: 999, padding: "3px 10px", background: "var(--gold-glow)", border: "1px solid var(--gold-border)", color: "var(--gold)" }}>
+          <span className="os-pipeline-column-count">
             {count}
           </span>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6 }}>
-          <div style={{ fontSize: 10, color: "var(--text-dim)", fontWeight: 800, display: "flex", alignItems: "center", gap: 4 }}>
+        <div className="os-pipeline-column-stats">
+          <div className="os-pipeline-column-stat">
             <Flame size={11} />
             {urgentCount}
           </div>
-          <div style={{ fontSize: 10, color: "var(--text-dim)", fontWeight: 800, display: "flex", alignItems: "center", gap: 4 }}>
+          <div className="os-pipeline-column-stat">
             <Clock3 size={11} />
             {formatElapsedMinutes(avgElapsedMinutes)}
           </div>
-          <div style={{ fontSize: 10, color: stagnationCount > 0 ? "var(--danger)" : "var(--text-dim)", fontWeight: 800, display: "flex", alignItems: "center", gap: 4 }}>
+          <div className={`os-pipeline-column-stat ${stagnationCount > 0 ? "is-danger" : ""}`}>
             <TimerReset size={11} />
             {stagnationCount}
           </div>
         </div>
       </div>
 
-      <div style={{ padding: 10, display: "flex", flexDirection: "column", gap: 10, minHeight: 120, flex: 1, overflowY: "auto" }}>{children}</div>
+      <div className="os-pipeline-column-body">{children}</div>
     </section>
   );
 }

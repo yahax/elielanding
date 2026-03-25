@@ -76,6 +76,32 @@ function buildFallbackIdempotencyKey(input: {
     return createHash("sha256").update(raw).digest("hex");
 }
 
+function extractOrderIdFromRpcResult(value: unknown): string | null {
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }
+
+    if (Array.isArray(value)) {
+        return value.length > 0 ? extractOrderIdFromRpcResult(value[0]) : null;
+    }
+
+    if (!value || typeof value !== "object") return null;
+
+    const record = value as Record<string, unknown>;
+    const direct =
+        extractOrderIdFromRpcResult(record.order_id) ??
+        extractOrderIdFromRpcResult(record.orderId) ??
+        extractOrderIdFromRpcResult(record.id);
+    if (direct) return direct;
+
+    if (record.data && typeof record.data === "object") {
+        return extractOrderIdFromRpcResult(record.data);
+    }
+
+    return null;
+}
+
 export async function POST(req: Request) {
     try {
         const offerMode = process.env.NEXT_PUBLIC_OFFER_MODE || "ramadan";
@@ -230,7 +256,7 @@ export async function POST(req: Request) {
             },
         };
 
-        const { data: orderId, error } = await supabase.rpc("create_order_secure", rpcPayload);
+        const { data: rpcResult, error } = await supabase.rpc("create_order_secure", rpcPayload);
 
         if (error) {
             console.error("[API/ORDERS][DEBUG] backend rejection", error);
@@ -241,6 +267,18 @@ export async function POST(req: Request) {
                     details: error,
                 },
                 { status: 400 }
+            );
+        }
+
+        const orderId = extractOrderIdFromRpcResult(rpcResult);
+        if (!orderId) {
+            console.error("[API/ORDERS][DEBUG] invalid rpc response", rpcResult);
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: "Database returned an invalid order identifier.",
+                },
+                { status: 500 }
             );
         }
 

@@ -76,8 +76,14 @@ export async function GET() {
     );
   } catch (error: unknown) {
     console.error('[Settings/API] GET error:', error);
-    const message = error instanceof Error ? error.message : "Unable to load settings";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      {
+        settings: defaultSettings,
+        configured: false,
+        message: "Fallback settings returned after API error.",
+      },
+      { status: 200 }
+    );
   }
 }
 

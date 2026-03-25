@@ -95,7 +95,9 @@ export function OsLayoutClient({ children }: { children: React.ReactNode }) {
         <div className="dashboard-main">
           <TopBar />
           <main className="dashboard-content">
-            <div className="animate-fade-in">{children}</div>
+            <div className="dashboard-content-inner">
+              <div className="animate-fade-in os-content-transition">{children}</div>
+            </div>
           </main>
         </div>
       </div>

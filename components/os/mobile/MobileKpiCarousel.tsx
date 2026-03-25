@@ -27,10 +27,11 @@ function cardTone(tone: MobileKpi["tone"]): CSSProperties {
 
 export function MobileKpiCarousel({ items }: { items: MobileKpi[] }) {
   return (
-    <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
+    <div className="os-mobile-kpi-carousel" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
       {items.map((item) => (
         <article
           key={item.id}
+          className="os-mobile-kpi-item"
           style={{
             minWidth: 138,
             borderRadius: 12,

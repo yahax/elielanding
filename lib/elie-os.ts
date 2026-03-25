@@ -51,6 +51,27 @@ export interface ElieOSOrderPayload {
 
 const SAFE_ORDERS_API_ENDPOINT = "/api/orders";
 
+function normalizeOrderId(value: unknown): string | undefined {
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+    }
+
+    if (Array.isArray(value)) {
+        return value.length > 0 ? normalizeOrderId(value[0]) : undefined;
+    }
+
+    if (!value || typeof value !== "object") return undefined;
+
+    const record = value as Record<string, unknown>;
+    return (
+        normalizeOrderId(record.order_id) ??
+        normalizeOrderId(record.orderId) ??
+        normalizeOrderId(record.id) ??
+        normalizeOrderId(record.data)
+    );
+}
+
 function resolveOrdersApiEndpoint(): string {
     const configured = process.env.NEXT_PUBLIC_ELIE_OS_ENDPOINT?.trim();
 
@@ -93,7 +114,7 @@ export async function submitOrderToElieOS(payload: ElieOSOrderPayload): Promise<
 
         return {
             success: true,
-            orderId: responseData.orderId
+            orderId: normalizeOrderId(responseData.orderId)
         };
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "Unknown error occurred";

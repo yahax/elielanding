@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { listDomainEvents } from "@/lib/os/realtime/event-dispatcher";
-import { toApiErrorResponse } from "@/lib/os/orders/server/http";
 
 const querySchema = z.object({
   since: z.string().optional(),

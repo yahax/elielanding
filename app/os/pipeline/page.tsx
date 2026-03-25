@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   DndContext,
@@ -17,11 +17,18 @@ import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrate
 import toast from "react-hot-toast";
 import { OsToaster } from "@/components/ui/OsToaster";
 import { EmptyState, LoadingState } from "@/components/ui/States";
-import { fetchOrders, updateOrderStatus as updateOrderStatusRequest } from "@/lib/os/api";
+import {
+  addOrderNote as addOrderNoteRequest,
+  assignOrder,
+  fetchOrders,
+  updateOrderStatus as updateOrderStatusRequest,
+} from "@/lib/os/api";
 import type { NormalizedOrder } from "@/lib/os/types";
 import { buildFocusQueue, buildOrderFilterOptions, buildPipelineColumnStats, buildPipelineHealth, enrichOrders, applyOrderFilters, sortOrders } from "@/lib/os/orders/helpers/scoring";
 import { loadOpsMeta, saveOpsMeta } from "@/lib/os/orders/helpers/storage";
+import { extractOpsMetaFromOrders } from "@/lib/os/orders/helpers/ops-meta";
 import {
+  DEFAULT_OPERATORS,
   DEFAULT_ORDER_FILTERS_STATE,
   type EnrichedOrder,
   type OrderFiltersState,
@@ -115,7 +122,15 @@ function PipelinePageInner() {
   const lastQueryRef = useRef<string>("");
 
   const now = useMemo(() => new Date(nowTs), [nowTs]);
-  const orderFilters = useMemo(() => mapPipelineFiltersToOrderFilters(filters), [filters]);
+  const deferredSearch = useDeferredValue(filters.search);
+  const orderFilters = useMemo(
+    () =>
+      mapPipelineFiltersToOrderFilters({
+        ...filters,
+        search: deferredSearch,
+      }),
+    [deferredSearch, filters]
+  );
 
   useEffect(() => {
     setOpsMeta(loadOpsMeta());
@@ -178,8 +193,16 @@ function PipelinePageInner() {
     else setRefreshing(true);
 
     try {
-      const { orders: fetched } = await fetchOrders({ limit: 1000, days: 120 });
+      const { orders: fetched } = await fetchOrders({ limit: 250, days: 120 });
       setOrders(fetched);
+      setOpsMeta((prev) => {
+        const next = {
+          ...prev,
+          ...extractOpsMetaFromOrders(fetched),
+        };
+        saveOpsMeta(next);
+        return next;
+      });
       hasLoadedRef.current = true;
       if (showToast) toast.success("Pipeline synchronisé");
     } catch (error) {
@@ -281,6 +304,69 @@ function PipelinePageInner() {
     [orders, registerTouchFromStatusUpdate]
   );
 
+  const assignOperator = useCallback(
+    async (orderId: string, operator: string) => {
+      const normalizedOperator = operator.trim();
+      if (normalizedOperator === "") return;
+      const operatorId = normalizedOperator.toLowerCase().replace(/\s+/g, "_");
+      const nowIso = new Date().toISOString();
+      const previous = opsMeta;
+
+      upsertOpsMeta((prev) => ({
+        ...prev,
+        [orderId]: {
+          ...(prev[orderId] || {}),
+          operator: normalizedOperator,
+          assignedAt: nowIso,
+          lastTouchAt: nowIso,
+        },
+      }));
+
+      try {
+        await assignOrder(orderId, {
+          operatorId,
+          operatorName: normalizedOperator,
+        });
+        toast.success(`Assigné à ${normalizedOperator}`);
+      } catch (error) {
+        setOpsMeta(previous);
+        saveOpsMeta(previous);
+        const message = error instanceof Error ? error.message : "Erreur d'assignation";
+        toast.error(message);
+      }
+    },
+    [opsMeta, upsertOpsMeta]
+  );
+
+  const addNote = useCallback(
+    async (orderId: string, note: string) => {
+      const normalizedNote = note.trim();
+      if (normalizedNote === "") return;
+      const nowIso = new Date().toISOString();
+      const previous = opsMeta;
+
+      upsertOpsMeta((prev) => ({
+        ...prev,
+        [orderId]: {
+          ...(prev[orderId] || {}),
+          notes: [...((prev[orderId]?.notes as string[] | undefined) || []), normalizedNote],
+          lastTouchAt: nowIso,
+        },
+      }));
+
+      try {
+        await addOrderNoteRequest(orderId, normalizedNote);
+        toast.success("Note ajoutée");
+      } catch (error) {
+        setOpsMeta(previous);
+        saveOpsMeta(previous);
+        const message = error instanceof Error ? error.message : "Erreur note";
+        toast.error(message);
+      }
+    },
+    [opsMeta, upsertOpsMeta]
+  );
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -323,7 +409,7 @@ function PipelinePageInner() {
   }
 
   return (
-    <div className="os-page" style={{ height: "calc(100vh - 100px)", paddingBottom: isMobile ? 24 : 0 }}>
+    <div className="os-page os-pipeline-page" style={{ height: "calc(100vh - 100px)", paddingBottom: isMobile ? 24 : 0 }}>
       <OsToaster />
 
       <PipelineHealthHeader
@@ -334,12 +420,12 @@ function PipelinePageInner() {
         }}
       />
 
-      <div className="luxury-card" style={{ borderRadius: 18, padding: 14 }}>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "minmax(240px,1.2fr) repeat(6, minmax(0, 1fr)) auto auto", gap: 8, alignItems: "center" }}>
-          <div style={{ position: "relative" }}>
-            <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
+      <div className="luxury-card os-card-subtle os-pipeline-toolbar">
+        <div className="os-pipeline-filter-grid" style={{ gridTemplateColumns: isMobile ? "1fr" : "minmax(240px,1.2fr) repeat(6, minmax(0, 1fr)) auto auto" }}>
+          <div className="os-pipeline-search">
+            <Search size={14} className="os-pipeline-search-icon" />
             <input
-              className="filter-input"
+              className="filter-input os-toolbar-search-input"
               value={filters.search}
               onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))}
               placeholder="Recherche pipeline..."
@@ -347,7 +433,7 @@ function PipelinePageInner() {
             />
           </div>
 
-          <select className="filter-select" value={filters.source} onChange={(event) => setFilters((prev) => ({ ...prev, source: event.target.value }))} style={{ height: 38 }}>
+          <select className="filter-select os-pipeline-filter-select" value={filters.source} onChange={(event) => setFilters((prev) => ({ ...prev, source: event.target.value }))} style={{ height: 38 }}>
             <option value="all">Toutes sources</option>
             {filterOptions.sources.map((source) => (
               <option key={source} value={source}>
@@ -356,7 +442,7 @@ function PipelinePageInner() {
             ))}
           </select>
 
-          <select className="filter-select" value={filters.city} onChange={(event) => setFilters((prev) => ({ ...prev, city: event.target.value }))} style={{ height: 38 }}>
+          <select className="filter-select os-pipeline-filter-select" value={filters.city} onChange={(event) => setFilters((prev) => ({ ...prev, city: event.target.value }))} style={{ height: 38 }}>
             <option value="all">Toutes villes</option>
             {filterOptions.cities.map((city) => (
               <option key={city} value={city}>
@@ -365,7 +451,7 @@ function PipelinePageInner() {
             ))}
           </select>
 
-          <select className="filter-select" value={filters.operator} onChange={(event) => setFilters((prev) => ({ ...prev, operator: event.target.value }))} style={{ height: 38 }}>
+          <select className="filter-select os-pipeline-filter-select" value={filters.operator} onChange={(event) => setFilters((prev) => ({ ...prev, operator: event.target.value }))} style={{ height: 38 }}>
             <option value="all">Tous opérateurs</option>
             {filterOptions.operators.map((operator) => (
               <option key={operator} value={operator}>
@@ -374,7 +460,7 @@ function PipelinePageInner() {
             ))}
           </select>
 
-          <select className="filter-select" value={filters.priority} onChange={(event) => setFilters((prev) => ({ ...prev, priority: event.target.value as PipelineLocalFilters["priority"] }))} style={{ height: 38 }}>
+          <select className="filter-select os-pipeline-filter-select" value={filters.priority} onChange={(event) => setFilters((prev) => ({ ...prev, priority: event.target.value as PipelineLocalFilters["priority"] }))} style={{ height: 38 }}>
             <option value="all">Toutes priorités</option>
             <option value="critical">Critique</option>
             <option value="high">Haute</option>
@@ -382,13 +468,13 @@ function PipelinePageInner() {
             <option value="low">Faible</option>
           </select>
 
-          <select className="filter-select" value={filters.clientType} onChange={(event) => setFilters((prev) => ({ ...prev, clientType: event.target.value as PipelineLocalFilters["clientType"] }))} style={{ height: 38 }}>
+          <select className="filter-select os-pipeline-filter-select" value={filters.clientType} onChange={(event) => setFilters((prev) => ({ ...prev, clientType: event.target.value as PipelineLocalFilters["clientType"] }))} style={{ height: 38 }}>
             <option value="all">Tous clients</option>
             <option value="new">Nouveau client</option>
             <option value="returning">Récurrent</option>
           </select>
 
-          <select className="filter-select" value={filters.datePreset} onChange={(event) => setFilters((prev) => ({ ...prev, datePreset: event.target.value as PipelineLocalFilters["datePreset"] }))} style={{ height: 38 }}>
+          <select className="filter-select os-pipeline-filter-select" value={filters.datePreset} onChange={(event) => setFilters((prev) => ({ ...prev, datePreset: event.target.value as PipelineLocalFilters["datePreset"] }))} style={{ height: 38 }}>
             <option value="today">Aujourd’hui</option>
             <option value="7d">7 jours</option>
             <option value="30d">30 jours</option>
@@ -398,24 +484,24 @@ function PipelinePageInner() {
 
           <button
             type="button"
-            className={filters.onlyUrgent ? "btn btn-primary btn-sm" : "btn-ghost btn-sm"}
+            className={filters.onlyUrgent ? "btn btn-primary btn-sm os-toolbar-btn" : "btn-ghost btn-sm os-toolbar-btn"}
             onClick={() => setFilters((prev) => ({ ...prev, onlyUrgent: !prev.onlyUrgent }))}
           >
             Urgentes
           </button>
 
-          <button type="button" className="btn-ghost btn-sm" onClick={() => load(true)}>
+          <button type="button" className="btn-ghost btn-sm os-toolbar-btn os-pipeline-refresh" onClick={() => load(true)}>
             <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
             Refresh
           </button>
         </div>
 
-        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+        <div className="os-segmented os-pipeline-views">
           {(isMobile ? (["kanban", "focus", "urgent"] as ViewMode[]) : (["kanban", "list", "focus"] as ViewMode[])).map((mode) => (
             <button
               key={mode}
               type="button"
-              className={viewMode === mode ? "btn btn-primary btn-sm" : "btn-ghost btn-sm"}
+              className={`os-segmented-btn ${viewMode === mode ? "is-active" : ""}`}
               onClick={() => setViewMode(mode)}
             >
               {mode === "kanban" ? (isMobile ? "Stages" : "Kanban") : mode === "list" ? "Liste" : mode === "focus" ? "Queue" : "Urgences"}
@@ -425,24 +511,9 @@ function PipelinePageInner() {
       </div>
 
       {isMobile ? (
-        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
+        <div className="os-pipeline-mobile-stats">
           {columnStats.map((column) => (
-            <div
-              key={column.status}
-              style={{
-                borderRadius: 999,
-                whiteSpace: "nowrap",
-                height: 34,
-                border: "1px solid var(--border)",
-                background: "var(--surface)",
-                color: "var(--text-muted)",
-                fontSize: 11,
-                fontWeight: 800,
-                padding: "0 12px",
-                display: "inline-flex",
-                alignItems: "center",
-              }}
-            >
+            <div key={column.status} className="os-chip">
               {getStatusLabel(column.status)} ({column.count})
             </div>
           ))}
@@ -453,7 +524,7 @@ function PipelinePageInner() {
         <EmptyState title="Pipeline vide" copy="Ajustez vos filtres pour afficher les commandes du pipeline." />
       ) : viewMode === "kanban" ? (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-          <div style={{ display: "flex", gap: 14, overflowX: "auto", flex: 1, paddingBottom: 12 }}>
+          <div className="os-pipeline-kanban">
             {PIPELINE_COLUMNS.map((status) => {
               const stats = columnStats.find((item) => item.status === status);
               const items = grouped.get(status) || [];
@@ -479,8 +550,8 @@ function PipelinePageInner() {
           <DragOverlay>{activeOrder ? <PipelineCard order={activeOrder} onOpenDetails={() => undefined} isOverlay /> : null}</DragOverlay>
         </DndContext>
       ) : viewMode === "list" ? (
-        <div className="table-wrap" style={{ borderRadius: 18, overflow: "auto" }}>
-          <table className="data-table" style={{ minWidth: 1050 }}>
+        <div className="table-wrap os-table-shell os-pipeline-list-shell">
+          <table className="data-table os-pipeline-list-table">
             <thead>
               <tr>
                 <th>Commande</th>
@@ -492,26 +563,26 @@ function PipelinePageInner() {
                 <th>Risque</th>
                 <th>SLA</th>
                 <th>Action recommandée</th>
-                <th style={{ textAlign: "right", paddingRight: 20 }}>Action</th>
+                <th className="os-pipeline-list-action-head">Action</th>
               </tr>
             </thead>
             <tbody>
               {filteredOrders.map((order) => (
-                <tr key={order.id} style={{ opacity: movingOrderId === order.id ? 0.6 : 1 }}>
+                <tr key={order.id} className={`os-table-row-interactive ${movingOrderId === order.id ? "is-updating" : ""}`} style={{ opacity: movingOrderId === order.id ? 0.6 : 1 }}>
                   <td>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                      <span style={{ fontWeight: 900, fontSize: 12 }}>#{order.id.slice(-8).toUpperCase()}</span>
-                      <span style={{ fontSize: 11, color: "var(--text-dim)" }}>{formatDateTime(order.created_at)}</span>
+                    <div className="os-pipeline-list-meta">
+                      <span className="os-pipeline-list-id">#{order.id.slice(-8).toUpperCase()}</span>
+                      <span className="os-pipeline-list-sub">{formatDateTime(order.created_at)}</span>
                     </div>
                   </td>
                   <td>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                      <span style={{ fontWeight: 800 }}>{order.customer_name}</span>
-                      <span style={{ fontSize: 11, color: "var(--text-dim)" }}>{order.phone}</span>
+                    <div className="os-pipeline-list-meta os-pipeline-list-meta-customer">
+                      <span className="os-pipeline-list-customer">{order.customer_name}</span>
+                      <span className="os-pipeline-list-sub">{order.phone}</span>
                     </div>
                   </td>
                   <td>{order.city || "-"}</td>
-                  <td style={{ fontWeight: 900 }}>{formatCurrencyMAD(order.estimatedValue)}</td>
+                  <td className="os-pipeline-list-value">{formatCurrencyMAD(order.estimatedValue)}</td>
                   <td>{getStatusLabel(order.status)}</td>
                   <td>
                     <PriorityScoreBadge priority={order.priority} score={order.priorityScore} compact />
@@ -525,8 +596,8 @@ function PipelinePageInner() {
                   <td>
                     <NextBestActionChip action={order.nextBestAction} compact />
                   </td>
-                  <td style={{ textAlign: "right", paddingRight: 14 }}>
-                    <button type="button" className="btn btn-primary btn-sm" onClick={() => { setSelectedOrderId(order.id); setDrawerOpen(true); }}>
+                  <td className="os-pipeline-list-action-cell">
+                    <button type="button" className="btn btn-primary btn-sm os-table-open" onClick={() => { setSelectedOrderId(order.id); setDrawerOpen(true); }}>
                       Ouvrir
                     </button>
                   </td>
@@ -536,18 +607,18 @@ function PipelinePageInner() {
           </table>
         </div>
       ) : viewMode === "urgent" ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+        <div className="os-pipeline-grid">
           {urgentQueue.map((order) => (
             <PipelineCard key={order.id} order={order} onOpenDetails={(item) => { setSelectedOrderId(item.id); setDrawerOpen(true); }} />
           ))}
           {urgentQueue.length === 0 ? (
-            <div style={{ border: "1px dashed var(--border)", borderRadius: 12, padding: 16, fontSize: 12, color: "var(--text-dim)", fontWeight: 700 }}>
+            <div className="os-pipeline-grid-empty">
               Aucune urgence active dans les filtres courants.
             </div>
           ) : null}
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+        <div className="os-pipeline-grid">
           {focusQueue.map((order) => (
             <PipelineCard key={order.id} order={order} onOpenDetails={(item) => { setSelectedOrderId(item.id); setDrawerOpen(true); }} />
           ))}
@@ -561,32 +632,10 @@ function PipelinePageInner() {
         onUpdateStatus={async (orderId, nextStatus) => {
           await commitStatusMove(orderId, nextStatus);
         }}
-        onAssignOperator={(orderId, operator) => {
-          const nowIso = new Date().toISOString();
-          upsertOpsMeta((prev) => ({
-            ...prev,
-            [orderId]: {
-              ...(prev[orderId] || {}),
-              operator,
-              assignedAt: nowIso,
-              lastTouchAt: nowIso,
-            },
-          }));
-          toast.success(`Assigné à ${operator}`);
-        }}
-        onAddNote={(orderId, note) => {
-          upsertOpsMeta((prev) => ({
-            ...prev,
-            [orderId]: {
-              ...(prev[orderId] || {}),
-              notes: [...((prev[orderId]?.notes as string[] | undefined) || []), note],
-              lastTouchAt: new Date().toISOString(),
-            },
-          }));
-          toast.success("Note ajoutée");
-        }}
+        onAssignOperator={assignOperator}
+        onAddNote={addNote}
         customerHistory={customerHistory}
-        availableOperators={filterOptions.operators}
+        availableOperators={Array.from(new Set([...DEFAULT_OPERATORS, ...filterOptions.operators]))}
       />
     </div>
   );
@@ -594,7 +643,7 @@ function PipelinePageInner() {
 
 export default function PipelinePage() {
   return (
-    <Suspense fallback={<div className="os-page" style={{ padding: 32, textAlign: "center", color: "var(--text-dim)" }}>Chargement pipeline...</div>}>
+    <Suspense fallback={<div className="os-page os-suspense-state">Chargement pipeline...</div>}>
       <PipelinePageInner />
     </Suspense>
   );

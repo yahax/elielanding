@@ -3,7 +3,6 @@ import { z } from "zod";
 import { ordersRepository } from "@/lib/os/orders/repositories/orders-repository";
 import { fetchCatalogProducts } from "@/lib/os/server";
 import { buildAnalyticsBundle, buildIntelligenceSnapshot } from "@/lib/os/analytics/server/snapshots";
-import { toApiErrorResponse } from "@/lib/os/orders/server/http";
 
 const querySchema = z.object({
   days: z.coerce.number().int().min(1).max(365).optional(),
@@ -42,6 +41,7 @@ export async function GET(req: Request) {
     const snapshot = buildIntelligenceSnapshot(orders, periodDays, bundle.overview);
     return NextResponse.json({ snapshot }, { status: 200 });
   } catch (error) {
-    return toApiErrorResponse(error, "Unable to load intelligence analytics");
+    console.warn("[API/OS] intelligence fallback empty snapshot:", error);
+    return NextResponse.json({ snapshot: buildIntelligenceSnapshot([], 30, null) }, { status: 200 });
   }
 }

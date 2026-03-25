@@ -16,17 +16,18 @@ export function MobileOrdersQueue({
   onOpenOrder: (orderId: string) => void;
 }) {
   return (
-    <section className="luxury-card" style={{ padding: 12, borderRadius: 14 }}>
+    <section className="luxury-card os-mobile-queue-card" style={{ padding: 12, borderRadius: 14 }}>
       <div style={{ fontSize: 12, fontWeight: 900, color: "var(--text)", marginBottom: 8 }}>{title}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {orders.length === 0 ? (
-          <div style={{ fontSize: 12, color: "var(--text-dim)", fontWeight: 700, padding: "10px 4px" }}>Aucune commande dans cette file.</div>
+          <div className="os-mobile-queue-empty" style={{ fontSize: 12, color: "var(--text-dim)", fontWeight: 700, padding: "10px 4px" }}>Aucune commande dans cette file.</div>
         ) : (
           orders.map((order) => (
             <button
               type="button"
               key={order.id}
               onClick={() => onOpenOrder(order.id)}
+              className="os-mobile-queue-row"
               style={{
                 border: "1px solid var(--border)",
                 borderRadius: 10,

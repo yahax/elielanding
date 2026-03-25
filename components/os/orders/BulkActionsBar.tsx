@@ -15,6 +15,8 @@ export function BulkActionsBar({
   onExport,
   onTag,
   onArchive,
+  taggingEnabled = true,
+  archivingEnabled = true,
   loading = false,
 }: {
   selectedCount: number;
@@ -26,6 +28,8 @@ export function BulkActionsBar({
   onExport: () => void;
   onTag: (tag: string) => void;
   onArchive: () => void;
+  taggingEnabled?: boolean;
+  archivingEnabled?: boolean;
   loading?: boolean;
 }) {
   const [status, setStatus] = useState<OrderStatus>("to_confirm");
@@ -39,6 +43,7 @@ export function BulkActionsBar({
 
   return (
     <div
+      className="os-bulk-bar"
       style={{
         position: "sticky",
         bottom: 16,
@@ -55,15 +60,15 @@ export function BulkActionsBar({
         alignItems: "center",
       }}
     >
-      <span style={{ fontWeight: 900, color: "var(--gold)", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+      <span className="os-bulk-bar-count" style={{ fontWeight: 900, color: "var(--gold)", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em" }}>
         {selectedCount} sélectionnées
       </span>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, flex: 1 }}>
+      <div className="os-bulk-bar-controls" style={{ display: "flex", flexWrap: "wrap", gap: 8, flex: 1 }}>
         <select
           value={status}
           onChange={(event) => setStatus(event.target.value as OrderStatus)}
-          className="filter-select"
+          className="filter-select os-bulk-bar-select"
           style={{ height: 36, minWidth: 170, fontSize: 12 }}
         >
           {STATUS_LIST.map((value) => (
@@ -72,17 +77,17 @@ export function BulkActionsBar({
             </option>
           ))}
         </select>
-        <button type="button" className="btn btn-sm" onClick={() => onChangeStatus(status)} disabled={loading}>
+        <button type="button" className="btn btn-sm os-bulk-bar-btn" onClick={() => onChangeStatus(status)} disabled={loading}>
           Changer statut
         </button>
-        <button type="button" className="btn-ghost btn-sm" onClick={onMarkCallback} disabled={loading}>
+        <button type="button" className="btn-ghost btn-sm os-bulk-bar-btn" onClick={onMarkCallback} disabled={loading}>
           Marquer callback
         </button>
 
         <select
           value={operator}
           onChange={(event) => setOperator(event.target.value)}
-          className="filter-select"
+          className="filter-select os-bulk-bar-select"
           style={{ height: 36, minWidth: 170, fontSize: 12 }}
         >
           <option value="">Assigner opérateur</option>
@@ -92,7 +97,7 @@ export function BulkActionsBar({
             </option>
           ))}
         </select>
-        <button type="button" className="btn-ghost btn-sm" onClick={() => operator && onAssignOperator(operator)} disabled={loading || operator === ""}>
+        <button type="button" className="btn-ghost btn-sm os-bulk-bar-btn" onClick={() => operator && onAssignOperator(operator)} disabled={loading || operator === ""}>
           <UserRoundPlus size={13} />
           Assigner
         </button>
@@ -100,25 +105,37 @@ export function BulkActionsBar({
         <input
           value={tag}
           onChange={(event) => setTag(event.target.value)}
-          className="filter-input"
+          className="filter-input os-bulk-bar-input"
           placeholder="Tag"
           style={{ height: 36, minWidth: 120, fontSize: 12 }}
         />
-        <button type="button" className="btn-ghost btn-sm" onClick={() => tag && onTag(tag)} disabled={loading || tag.trim() === ""}>
+        <button
+          type="button"
+          className="btn-ghost btn-sm os-bulk-bar-btn"
+          onClick={() => tag && onTag(tag)}
+          disabled={loading || tag.trim() === "" || !taggingEnabled}
+          title={!taggingEnabled ? "Fonction en cours d'implémentation" : undefined}
+        >
           <Tag size={13} />
-          Taguer
+          {taggingEnabled ? "Taguer" : "Taguer (à venir)"}
         </button>
       </div>
 
-      <button type="button" className="btn-ghost btn-sm" onClick={onExport} disabled={loading}>
+      <button type="button" className="btn-ghost btn-sm os-bulk-bar-btn" onClick={onExport} disabled={loading}>
         <Download size={13} />
         Export
       </button>
-      <button type="button" className="btn-ghost btn-sm" onClick={onArchive} disabled={loading}>
+      <button
+        type="button"
+        className="btn-ghost btn-sm os-bulk-bar-btn"
+        onClick={onArchive}
+        disabled={loading || !archivingEnabled}
+        title={!archivingEnabled ? "Fonction en cours d'implémentation" : undefined}
+      >
         <Archive size={13} />
-        Archiver
+        {archivingEnabled ? "Archiver" : "Archiver (à venir)"}
       </button>
-      <button type="button" className="btn-ghost btn-sm" onClick={onClear} disabled={loading}>
+      <button type="button" className="btn-ghost btn-sm os-bulk-bar-btn" onClick={onClear} disabled={loading}>
         <X size={13} />
         Fermer
       </button>
