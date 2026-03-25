@@ -9,6 +9,9 @@ export const dynamic = "force-dynamic";
 
 const MAX_PAGE_SIZE = 50;
 const MAX_DAYS_RANGE = 365;
+const ORDERS_DEBUG_LOGS = process.env.NODE_ENV !== "production" || process.env.ELIE_OS_DEBUG_LOGS === "1";
+const ORDERS_WARN_COOLDOWN_MS = 60_000;
+const lastOrdersWarnByKey = new Map<string, number>();
 
 const CANONICAL_STATUSES = new Set([
   "new",
@@ -103,6 +106,23 @@ function buildOrdersResponse(params: {
   };
 }
 
+function logOrdersDebug(message: string, payload: Record<string, unknown>) {
+  if (!ORDERS_DEBUG_LOGS) return;
+  console.log(message, payload);
+}
+
+function warnOrdersThrottled(key: string, message: string, payload?: Record<string, unknown>) {
+  if (ORDERS_DEBUG_LOGS) {
+    console.warn(message, payload ?? {});
+    return;
+  }
+  const now = Date.now();
+  const last = lastOrdersWarnByKey.get(key) ?? 0;
+  if (now - last < ORDERS_WARN_COOLDOWN_MS) return;
+  lastOrdersWarnByKey.set(key, now);
+  console.warn(message, payload ?? {});
+}
+
 export async function GET(req: Request) {
   const requestStartedAt = performance.now();
   const url = new URL(req.url);
@@ -131,7 +151,7 @@ export async function GET(req: Request) {
     pipeline: pipelineOnly,
   };
 
-  console.log("[API/OS][orders] filters_received", {
+  logOrdersDebug("[API/OS][orders] filters_received", {
     route: "/api/os/orders",
     page,
     pageSize,
@@ -149,9 +169,9 @@ export async function GET(req: Request) {
       : null;
 
     if (!session) {
-      console.warn("[API/OS][orders] missing or invalid session, returning safe empty payload.");
+      warnOrdersThrottled("orders:invalid_session", "[API/OS][orders] missing or invalid session, returning safe empty payload.");
       const response = buildOrdersResponse({ orders: [], page, pageSize, total: 0 });
-      console.log("[API/OS][orders] result_count", {
+      logOrdersDebug("[API/OS][orders] result_count", {
         route: "/api/os/orders",
         returnedCount: response.orders.length,
         total: response.total,
@@ -215,7 +235,7 @@ export async function GET(req: Request) {
         details: error.details,
       });
       const response = buildOrdersResponse({ orders: [], page, pageSize, total: 0 });
-      console.log("[API/OS][orders] result_count", {
+      logOrdersDebug("[API/OS][orders] result_count", {
         route: "/api/os/orders",
         returnedCount: response.orders.length,
         total: response.total,
@@ -237,7 +257,7 @@ export async function GET(req: Request) {
       total: typeof count === "number" ? count : orders.length,
     });
 
-    console.log("[API/OS][orders] result_count", {
+    logOrdersDebug("[API/OS][orders] result_count", {
       route: "/api/os/orders",
       returnedCount: response.orders.length,
       total: response.total,
@@ -254,7 +274,7 @@ export async function GET(req: Request) {
       message: error instanceof Error ? error.message : "Unknown error",
     });
     const response = buildOrdersResponse({ orders: [], page, pageSize, total: 0 });
-    console.log("[API/OS][orders] result_count", {
+    logOrdersDebug("[API/OS][orders] result_count", {
       route: "/api/os/orders",
       returnedCount: response.orders.length,
       total: response.total,

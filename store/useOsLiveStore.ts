@@ -72,6 +72,22 @@ function deduplicateFeedEvents(items: LiveEvent[]): LiveEvent[] {
   });
 }
 
+function isSameNotificationList(a: NotificationItem[], b: NotificationItem[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i].id !== b[i].id || a[i].read !== b[i].read) return false;
+  }
+  return true;
+}
+
+function isSameFeedList(a: LiveEvent[], b: LiveEvent[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i].id !== b[i].id) return false;
+  }
+  return true;
+}
+
 export const useOsLiveStore = create<OsLiveState>()(
   persist(
     (set) => ({
@@ -86,18 +102,22 @@ export const useOsLiveStore = create<OsLiveState>()(
         set((state) => {
           if (items.length === 0) return state;
           const merged = deduplicateNotifications(sortByDateDesc([...items, ...state.notifications]));
+          const nextNotifications = merged.slice(0, 160);
+          if (isSameNotificationList(nextNotifications, state.notifications)) return state;
           return {
             ...state,
-            notifications: merged.slice(0, 160),
+            notifications: nextNotifications,
           };
         }),
       addFeedEvents: (events) =>
         set((state) => {
           if (events.length === 0) return state;
           const merged = deduplicateFeedEvents(sortByDateDesc([...events, ...state.feed]));
+          const nextFeed = merged.slice(0, 140);
+          if (isSameFeedList(nextFeed, state.feed)) return state;
           return {
             ...state,
-            feed: merged.slice(0, 140),
+            feed: nextFeed,
           };
         }),
       markNotificationRead: (id) =>
@@ -117,16 +137,22 @@ export const useOsLiveStore = create<OsLiveState>()(
           feed: [],
         })),
       setRealtimeStatus: (status, error = null) =>
-        set((state) => ({
-          ...state,
-          realtimeStatus: status,
-          realtimeError: error,
-        })),
+        set((state) => {
+          if (state.realtimeStatus === status && state.realtimeError === error) return state;
+          return {
+            ...state,
+            realtimeStatus: status,
+            realtimeError: error,
+          };
+        }),
       setLastSyncAt: (iso) =>
-        set((state) => ({
-          ...state,
-          lastSyncAt: iso,
-        })),
+        set((state) => {
+          if (state.lastSyncAt === iso) return state;
+          return {
+            ...state,
+            lastSyncAt: iso,
+          };
+        }),
       updateSettings: (patch) =>
         set((state) => {
           const next = {

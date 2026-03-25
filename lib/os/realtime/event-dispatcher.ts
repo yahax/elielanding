@@ -13,18 +13,28 @@ export interface DispatchDomainEventInput {
   payload?: Record<string, unknown>;
 }
 
-function isMissingTableError(error: unknown): boolean {
+const EVENT_SELECT_SAFE = "id,event_type,entity_type,entity_id,label,payload,created_at";
+const eventWarnCooldownMs = 60_000;
+const lastEventWarnByKey = new Map<string, number>();
+
+function isSchemaCompatibilityError(error: unknown): boolean {
   if (typeof error !== "object" || error == null) return false;
   const code = "code" in error ? String((error as { code?: string }).code) : "";
-  return code === "42P01" || code === "PGRST205" || code === "PGRST204";
+  if (code === "42P01" || code === "PGRST205" || code === "PGRST204" || code === "42703") return true;
+  const message = "message" in error ? String((error as { message?: string }).message ?? "") : "";
+  return message.includes("does not exist");
 }
 
-function isUuidLike(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-function toLegacyEventEntityUuid(entityId: string): string {
-  return isUuidLike(entityId) ? entityId : "00000000-0000-0000-0000-000000000000";
+function warnEventThrottled(key: string, message: string, error: unknown) {
+  if (process.env.NODE_ENV !== "production") {
+    console.warn(message, error);
+    return;
+  }
+  const now = Date.now();
+  const lastAt = lastEventWarnByKey.get(key) ?? 0;
+  if (now - lastAt < eventWarnCooldownMs) return;
+  lastEventWarnByKey.set(key, now);
+  console.warn(message, error);
 }
 
 function mapDbRowToDomainEvent(row: {
@@ -69,7 +79,7 @@ export async function dispatchDomainEvent(input: DispatchDomainEventInput): Prom
   try {
     const supabase = createServiceSupabaseClient();
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("os_domain_events")
       .insert({
         id: event.id,
@@ -82,18 +92,36 @@ export async function dispatchDomainEvent(input: DispatchDomainEventInput): Prom
         payload: event.payload,
         created_at: event.createdAt,
       })
-      .select("id,event_type,entity_type,entity_id,actor_id,actor_name,label,payload,created_at")
+      .select(EVENT_SELECT_SAFE)
       .single();
+
+    if (error && isSchemaCompatibilityError(error)) {
+      const fallbackInsert = await supabase
+        .from("os_domain_events")
+        .insert({
+          id: event.id,
+          event_type: event.type,
+          entity_type: event.entityType,
+          entity_id: event.entityId,
+          label: event.label,
+          payload: event.payload,
+          created_at: event.createdAt,
+        })
+        .select(EVENT_SELECT_SAFE)
+        .single();
+      data = fallbackInsert.data;
+      error = fallbackInsert.error;
+    }
 
     if (!error && data) {
       return mapDbRowToDomainEvent(data);
     }
 
-    if (error && !isMissingTableError(error)) {
-      console.warn("[EVENT] os_domain_events insert failed:", error);
+    if (error && !isSchemaCompatibilityError(error)) {
+      warnEventThrottled("events:insert", "[EVENT] os_domain_events insert failed:", error);
     }
   } catch (error) {
-    console.warn("[EVENT] Falling back to memory store:", error);
+    warnEventThrottled("events:insert:catch", "[EVENT] Falling back to memory store:", error);
   }
 
   return event;
@@ -110,7 +138,7 @@ export async function listDomainEvents(params?: {
 
     let query = supabase
       .from("os_domain_events")
-      .select("id,event_type,entity_type,entity_id,actor_id,actor_name,label,payload,created_at")
+      .select(EVENT_SELECT_SAFE)
       .order("created_at", { ascending: false })
       .limit(limit);
 
@@ -121,11 +149,11 @@ export async function listDomainEvents(params?: {
       return data.map((row) => mapDbRowToDomainEvent(row));
     }
 
-    if (error && !isMissingTableError(error)) {
-      console.warn("[EVENT] list os_domain_events failed:", error);
+    if (error && !isSchemaCompatibilityError(error)) {
+      warnEventThrottled("events:list", "[EVENT] list os_domain_events failed:", error);
     }
   } catch (error) {
-    console.warn("[EVENT] list fallback memory due to error:", error);
+    warnEventThrottled("events:list:catch", "[EVENT] list fallback memory due to error:", error);
   }
 
   const events = getOsMemoryStore().domainEvents;

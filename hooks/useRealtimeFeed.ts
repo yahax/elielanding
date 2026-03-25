@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { liveEventFromDraft } from "@/lib/os/live/helpers";
 import type { LiveEvent, NotificationDraft } from "@/lib/os/live/types";
 import { useOsLiveStore } from "@/store/useOsLiveStore";
@@ -14,11 +14,11 @@ export function useRealtimeFeed() {
   const setRealtimeStatus = useOsLiveStore((state) => state.setRealtimeStatus);
   const setLastSyncAt = useOsLiveStore((state) => state.setLastSyncAt);
 
-  const pushDraftEvents = (drafts: NotificationDraft[]) => {
+  const pushDraftEvents = useCallback((drafts: NotificationDraft[]) => {
     const events = drafts.map((draft) => liveEventFromDraft(draft));
     addFeedEvents(events);
     return events;
-  };
+  }, [addFeedEvents]);
 
   const latestEvents = useMemo<LiveEvent[]>(() => feed.slice(0, 24), [feed]);
 

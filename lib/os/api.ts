@@ -18,6 +18,30 @@ import type {
 } from "@/lib/os/domain/types";
 
 type RequestInitWithNoStore = RequestInit & { noStore?: boolean };
+type PendingRequestMap = Map<string, Promise<unknown>>;
+
+const pendingGetRequests: PendingRequestMap = new Map();
+const logCooldownMs = 60_000;
+const lastLogByKey = new Map<string, number>();
+
+function shouldLogNow(key: string): boolean {
+  if (process.env.NODE_ENV !== "production") return true;
+  const now = Date.now();
+  const last = lastLogByKey.get(key) ?? 0;
+  if (now - last < logCooldownMs) return false;
+  lastLogByKey.set(key, now);
+  return true;
+}
+
+function logApiError(key: string, message: string, error: unknown): void {
+  if (!shouldLogNow(key)) return;
+  console.error(message, error);
+}
+
+function logApiWarn(key: string, message: string, error: unknown): void {
+  if (!shouldLogNow(key)) return;
+  console.warn(message, error);
+}
 
 function normalizeOrdersPayload(orders: NormalizedOrder[] | null | undefined): NormalizedOrder[] {
   if (!Array.isArray(orders)) return [];
@@ -69,7 +93,16 @@ function buildIdempotencyKey(url: string, init?: RequestInitWithNoStore): string
 }
 
 async function osFetch<T>(url: string, init?: RequestInitWithNoStore): Promise<T> {
-  try {
+  const method = (init?.method ?? "GET").toUpperCase();
+  const canDedupe = method === "GET" || method === "HEAD";
+  const dedupeKey = canDedupe ? `${method}:${url}` : null;
+
+  if (dedupeKey) {
+    const pending = pendingGetRequests.get(dedupeKey);
+    if (pending) return pending as Promise<T>;
+  }
+
+  const requestPromise = (async () => {
     const headers = new Headers(init?.headers);
     if (!headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json");
@@ -96,9 +129,21 @@ async function osFetch<T>(url: string, init?: RequestInitWithNoStore): Promise<T
       throw new Error(errorMsg);
     }
     return data;
+  })();
+
+  if (dedupeKey) {
+    pendingGetRequests.set(dedupeKey, requestPromise as Promise<unknown>);
+  }
+
+  try {
+    return await requestPromise;
   } catch (err) {
-    console.error(`[OS/API] Fetch error for ${url}:`, err);
+    logApiError(`fetch:${url}:${method}`, `[OS/API] Fetch error for ${url}:`, err);
     throw err;
+  } finally {
+    if (dedupeKey) {
+      pendingGetRequests.delete(dedupeKey);
+    }
   }
 }
 
@@ -230,7 +275,7 @@ export async function fetchOrders(params: FetchOrdersParams = {}): Promise<Fetch
       hasMore,
     };
   } catch (error) {
-    console.warn("[OS/API] fetchOrders fallback empty list:", error);
+    logApiWarn("fetchOrders:fallback", "[OS/API] fetchOrders fallback empty list:", error);
     return {
       orders: [],
       page: requestedPage ?? 1,

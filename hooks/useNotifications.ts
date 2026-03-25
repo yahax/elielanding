@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { markNotificationsRead as markNotificationsReadRequest } from "@/lib/os/api";
 import { draftToNotification, shouldDisplayCategory } from "@/lib/os/live/helpers";
 import type { NotificationCategory, NotificationDraft, NotificationItem } from "@/lib/os/live/types";
@@ -16,30 +16,30 @@ export function useNotifications() {
 
   const unreadCount = useMemo(() => notifications.filter((item) => !item.read).length, [notifications]);
 
-  const pushDrafts = (drafts: NotificationDraft[]) => {
+  const pushDrafts = useCallback((drafts: NotificationDraft[]) => {
     const materialized = drafts
       .filter((draft) => shouldDisplayCategory(draft.category as Exclude<NotificationCategory, "all">, settings.categoriesEnabled))
       .map((draft) => draftToNotification(draft));
     addNotifications(materialized);
     return materialized;
-  };
+  }, [addNotifications, settings.categoriesEnabled]);
 
-  const filterByCategory = (category: NotificationCategory, onlyUnread = false): NotificationItem[] => {
+  const filterByCategory = useCallback((category: NotificationCategory, onlyUnread = false): NotificationItem[] => {
     return notifications.filter((item) => {
       if (category !== "all" && item.category !== category) return false;
       if (onlyUnread && item.read) return false;
       return true;
     });
-  };
+  }, [notifications]);
 
-  const markNotificationRead = (id: string) => {
+  const markNotificationRead = useCallback((id: string) => {
     markNotificationReadLocal(id);
     void markNotificationsReadRequest({ notificationId: id }).catch((error) => {
       console.warn("[NOTIFICATIONS] Failed to persist read state:", error);
     });
-  };
+  }, [markNotificationReadLocal]);
 
-  const markAllAsRead = () => {
+  const markAllAsRead = useCallback(() => {
     const unreadIds = notifications.filter((item) => !item.read).map((item) => item.id);
     markAllAsReadLocal();
     if (unreadIds.length > 0) {
@@ -47,7 +47,7 @@ export function useNotifications() {
         console.warn("[NOTIFICATIONS] Failed to persist bulk read state:", error);
       });
     }
-  };
+  }, [markAllAsReadLocal, notifications]);
 
   return {
     notifications,
