@@ -7,11 +7,11 @@ import type { MobileNavItem } from "@/lib/os/live/types";
 import { useNotifications } from "@/hooks/useNotifications";
 
 const NAV_ITEMS: MobileNavItem[] = [
-  { id: "home", label: "Accueil", href: "/os/control" },
-  { id: "orders", label: "Commandes", href: "/os/orders" },
-  { id: "pipeline", label: "Pipeline", href: "/os/pipeline" },
-  { id: "alerts", label: "Alertes", href: "/os/notifications" },
-  { id: "more", label: "Menu", href: "/os/settings" },
+  { id: "home", label: "Accueil", href: "/os-admin/control" },
+  { id: "orders", label: "Commandes", href: "/os-admin/orders" },
+  { id: "pipeline", label: "Pipeline", href: "/os-admin/pipeline" },
+  { id: "alerts", label: "Alertes", href: "/os-admin/notifications" },
+  { id: "more", label: "Menu", href: "/os-admin/settings" },
 ];
 
 function iconFor(item: MobileNavItem["id"]) {
@@ -39,7 +39,7 @@ export function BottomTabBar() {
       <div className="os-mobile-tabbar-grid">
         {NAV_ITEMS.map((item) => {
           const Icon = iconFor(item.id);
-          const active = item.href === "/os/control" ? pathname === "/os/control" : pathname.startsWith(item.href);
+          const active = item.href === "/os-admin/control" ? pathname === "/os-admin/control" : pathname.startsWith(item.href);
 
           return (
             <Link

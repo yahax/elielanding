@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { Sidebar } from "@/components/os/Sidebar";
+import { TopBar } from "@/components/os/TopBar";
+import { MobilePageShell } from "@/components/os/mobile/MobilePageShell";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { OsRealtimeBridge } from "@/components/os/live/OsRealtimeBridge";
 import { LiveToaster } from "@/components/ui/LiveToaster";
 import { fetchUserPreferences, saveUserPreferences } from "@/lib/os/api";
 import { useOsLiveStore } from "@/store/useOsLiveStore";
 
-export function OsLayoutClient({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const isLoginPage = pathname === "/os/login";
+export function OsAdminLayoutClient({ children }: { children: React.ReactNode }) {
+  const isMobile = useIsMobile(1024);
   const settings = useOsLiveStore((state) => state.settings);
   const warRoomPreference = useOsLiveStore((state) => state.warRoomPreference);
   const updateSettings = useOsLiveStore((state) => state.updateSettings);
@@ -17,7 +19,6 @@ export function OsLayoutClient({ children }: { children: React.ReactNode }) {
   const prefsHydratedRef = useRef(false);
 
   useEffect(() => {
-    if (isLoginPage) return;
     let mounted = true;
 
     void fetchUserPreferences()
@@ -44,10 +45,10 @@ export function OsLayoutClient({ children }: { children: React.ReactNode }) {
     return () => {
       mounted = false;
     };
-  }, [isLoginPage, setWarRoomPreference, updateSettings]);
+  }, [setWarRoomPreference, updateSettings]);
 
   useEffect(() => {
-    if (isLoginPage || !prefsHydratedRef.current) return;
+    if (!prefsHydratedRef.current) return;
 
     const timer = window.setTimeout(() => {
       void saveUserPreferences({
@@ -65,17 +66,33 @@ export function OsLayoutClient({ children }: { children: React.ReactNode }) {
     }, 700);
 
     return () => window.clearTimeout(timer);
-  }, [isLoginPage, settings, warRoomPreference]);
+  }, [settings, warRoomPreference]);
 
-  if (isLoginPage) {
-    return <div className="os-focus-body">{children}</div>;
+  if (isMobile) {
+    return (
+      <div className="dashboard-body" dir="ltr">
+        <OsRealtimeBridge />
+        <LiveToaster />
+        <MobilePageShell>{children}</MobilePageShell>
+      </div>
+    );
   }
 
   return (
-    <div className="os-focus-body" dir="ltr">
+    <div className="dashboard-body" dir="ltr">
       <OsRealtimeBridge />
       <LiveToaster />
-      {children}
+      <div className="dashboard-shell">
+        <Sidebar />
+        <div className="dashboard-main">
+          <TopBar />
+          <main className="dashboard-content">
+            <div className="dashboard-content-inner">
+              <div className="animate-fade-in os-content-transition">{children}</div>
+            </div>
+          </main>
+        </div>
+      </div>
     </div>
   );
 }

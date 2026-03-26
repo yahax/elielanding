@@ -23,6 +23,7 @@ interface FocusCardProps {
   onConfirm: () => void;
   onOpenCallback: () => void;
   onOpenCancel: () => void;
+  onReopen: () => void;
   onSwipeConfirm: () => void;
   onSwipeCancel: () => void;
 }
@@ -110,6 +111,7 @@ export function FocusCard({
   onConfirm,
   onOpenCallback,
   onOpenCancel,
+  onReopen,
   onSwipeConfirm,
   onSwipeCancel,
 }: FocusCardProps) {
@@ -173,17 +175,19 @@ export function FocusCard({
         </div>
 
         <div className={styles.templateRow}>
-          {TEMPLATE_OPTIONS.map((template) => (
-            <button
-              key={template.id}
-              type="button"
-              className={styles.templateChip}
-              data-active={messageTemplate === template.id ? "true" : "false"}
-              onClick={() => onSelectTemplate(template.id)}
-            >
-              {template.label}
-            </button>
-          ))}
+          <label htmlFor="template-selector">Template WhatsApp</label>
+          <select
+            id="template-selector"
+            className={styles.templateSelect}
+            value={messageTemplate}
+            onChange={(event) => onSelectTemplate(event.target.value as WhatsAppTemplateId)}
+          >
+            {TEMPLATE_OPTIONS.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className={styles.whatsMeta}>
@@ -225,46 +229,69 @@ export function FocusCard({
       </section>
 
       <section className={styles.cardZoneActions}>
-        <motion.button
-          type="button"
-          whileTap={{ scale: 0.96 }}
-          className={styles.actionButton}
-          data-tone="success"
-          onClick={onConfirm}
-          disabled={pending || isHistory}
-        >
-          <Check size={20} />
-          <span>CONFIRM</span>
-        </motion.button>
+        {isHistory ? (
+          <>
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.96 }}
+              className={styles.actionButton}
+              data-tone="neutral"
+              onClick={onReopen}
+              disabled={pending}
+            >
+              <RotateCcw size={20} />
+              <span>REOPEN</span>
+            </motion.button>
 
-        <motion.button
-          type="button"
-          whileTap={{ scale: 0.96 }}
-          className={styles.actionButton}
-          data-tone="warning"
-          onClick={onOpenCallback}
-          disabled={pending || isHistory}
-        >
-          <RotateCcw size={20} />
-          <span>CALLBACK</span>
-        </motion.button>
+            <div className={styles.shortcutHint}>
+              <Clock3 size={14} />
+              <span>Historique en lecture</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.96 }}
+              className={styles.actionButton}
+              data-tone="success"
+              onClick={onConfirm}
+              disabled={pending}
+            >
+              <Check size={20} />
+              <span>CONFIRM</span>
+            </motion.button>
 
-        <motion.button
-          type="button"
-          whileTap={{ scale: 0.96 }}
-          className={styles.actionButton}
-          data-tone="danger"
-          onClick={onOpenCancel}
-          disabled={pending || isHistory}
-        >
-          <X size={20} />
-          <span>CANCEL</span>
-        </motion.button>
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.96 }}
+              className={styles.actionButton}
+              data-tone="warning"
+              onClick={onOpenCallback}
+              disabled={pending}
+            >
+              <RotateCcw size={20} />
+              <span>CALLBACK</span>
+            </motion.button>
 
-        <div className={styles.shortcutHint}>
-          <Clock3 size={14} />
-          <span>C / R / A / SPACE</span>
-        </div>
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.96 }}
+              className={styles.actionButton}
+              data-tone="danger"
+              onClick={onOpenCancel}
+              disabled={pending}
+            >
+              <X size={20} />
+              <span>CANCEL</span>
+            </motion.button>
+
+            <div className={styles.shortcutHint}>
+              <Clock3 size={14} />
+              <span>C / R / A / SPACE</span>
+            </div>
+          </>
+        )}
       </section>
 
       <footer className={styles.previewFooter}>

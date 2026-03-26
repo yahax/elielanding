@@ -183,11 +183,11 @@ export default function DashboardHomePage() {
 
     // Urgent alerts
     const urgentAlerts = [
-      { id: "u-pending", label: "Commandes en attente", count: pendingConfirmations, tone: "warning", href: "/os/orders?status=to_confirm" },
-      { id: "u-callbacks", label: "Callbacks à relancer", count: callbacksOverdue, tone: "warning", href: "/os/orders?status=callback" },
-      { id: "u-blocked", label: "Commandes bloquées (+3h)", count: blockedOrders, tone: "danger", href: "/os/pipeline" },
-      { id: "u-highvalue", label: "Haute valeur non traitée", count: highValueUnconfirmed, tone: "danger", href: "/os/orders?status=to_confirm" },
-      { id: "u-stock", label: "Stock critique", count: lowStockAlerts.length, tone: "warning", href: "/os/inventory" },
+      { id: "u-pending", label: "Commandes en attente", count: pendingConfirmations, tone: "warning", href: "/os-admin/orders?status=to_confirm" },
+      { id: "u-callbacks", label: "Callbacks à relancer", count: callbacksOverdue, tone: "warning", href: "/os-admin/orders?status=callback" },
+      { id: "u-blocked", label: "Commandes bloquées (+3h)", count: blockedOrders, tone: "danger", href: "/os-admin/pipeline" },
+      { id: "u-highvalue", label: "Haute valeur non traitée", count: highValueUnconfirmed, tone: "danger", href: "/os-admin/orders?status=to_confirm" },
+      { id: "u-stock", label: "Stock critique", count: lowStockAlerts.length, tone: "warning", href: "/os-admin/inventory" },
     ];
 
     return {
@@ -238,7 +238,7 @@ export default function DashboardHomePage() {
           orders={newQueue.slice(0, 6)}
           onOpenOrder={(orderId) => {
             const order = newQueue.find((item) => item.id === orderId);
-            router.push(`/os/orders?status=${order?.status || "new"}`);
+            router.push(`/os-admin/orders?status=${order?.status || "new"}`);
           }}
         />
 
@@ -247,7 +247,7 @@ export default function DashboardHomePage() {
           orders={callbackQueue.slice(0, 6)}
           onOpenOrder={(orderId) => {
             const order = callbackQueue.find((item) => item.id === orderId);
-            router.push(`/os/orders?status=${order?.status || "callback"}`);
+            router.push(`/os-admin/orders?status=${order?.status || "callback"}`);
           }}
         />
 
@@ -257,7 +257,7 @@ export default function DashboardHomePage() {
               <Warehouse size={14} style={{ color: "var(--warning)" }} />
               <span style={{ fontSize: 12, fontWeight: 900, color: "var(--text)" }}>Stock Critique</span>
             </div>
-            <Link href="/os/inventory" style={{ fontSize: 11, fontWeight: 800, color: "var(--gold)", textDecoration: "none" }}>
+            <Link href="/os-admin/inventory" style={{ fontSize: 11, fontWeight: 800, color: "var(--gold)", textDecoration: "none" }}>
               Ouvrir stock
             </Link>
           </div>
@@ -283,7 +283,7 @@ export default function DashboardHomePage() {
               <Bell size={14} style={{ color: "var(--gold)" }} />
               <span style={{ fontSize: 12, fontWeight: 900, color: "var(--text)" }}>Notifications & Live Feed</span>
             </div>
-            <Link href="/os/notifications" style={{ fontSize: 11, fontWeight: 900, color: "var(--gold)", textDecoration: "none" }}>
+            <Link href="/os-admin/notifications" style={{ fontSize: 11, fontWeight: 900, color: "var(--gold)", textDecoration: "none" }}>
               {unreadCount} non lues
             </Link>
           </div>
@@ -327,12 +327,12 @@ export default function DashboardHomePage() {
 
       {/* ── KPI Strip ── */}
       <section className="bi-kpi-strip">
-        <BiKpiCard label="Commandes aujourd'hui" value={biData.todayOrders} icon={<ShoppingCart size={18} />} tone="gold" href="/os/orders" />
-        <BiKpiCard label="En attente" value={biData.pendingConfirmations} icon={<Clock size={18} />} tone={biData.pendingConfirmations > 0 ? "warning" : "success"} href="/os/orders?status=to_confirm" />
+        <BiKpiCard label="Commandes aujourd'hui" value={biData.todayOrders} icon={<ShoppingCart size={18} />} tone="gold" href="/os-admin/orders" />
+        <BiKpiCard label="En attente" value={biData.pendingConfirmations} icon={<Clock size={18} />} tone={biData.pendingConfirmations > 0 ? "warning" : "success"} href="/os-admin/orders?status=to_confirm" />
         <BiKpiCard label="Confirmées aujourd'hui" value={biData.confirmedToday} icon={<CheckCircle2 size={18} />} tone="success" />
         <BiKpiCard label="Annulées aujourd'hui" value={biData.canceledToday} icon={<XCircle size={18} />} tone={biData.canceledToday > 0 ? "danger" : "neutral"} />
         <BiKpiCard label="CA estimé" value={fmtMad(biData.todayRevenue)} unit="MAD" icon={<DollarSign size={18} />} tone="gold" sub={`Panier moyen: ${fmtMad(biData.avgBasket)} MAD`} />
-        <BiKpiCard label="Stock critique" value={biData.lowStockAlerts.length} icon={<Package size={18} />} tone={biData.lowStockAlerts.length > 0 ? "warning" : "success"} href="/os/inventory" />
+        <BiKpiCard label="Stock critique" value={biData.lowStockAlerts.length} icon={<Package size={18} />} tone={biData.lowStockAlerts.length > 0 ? "warning" : "success"} href="/os-admin/inventory" />
       </section>
 
       {/* ── Charts Row ── */}

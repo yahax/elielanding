@@ -4,19 +4,19 @@ This document describes the current production-ready backend architecture for EL
 
 ## 1) Domain and server structure
 
-- `lib/os/domain/*`
+- `lib/os-admin/domain/*`
   - Domain types, status transition guards, domain errors, query/deep-link mappers.
-- `lib/os/orders/*`
+- `lib/os-admin/orders/*`
   - Adapters (`supabase` + mock fallback), repository, mappers, mutation service.
-- `lib/os/analytics/*`
+- `lib/os-admin/analytics/*`
   - Server aggregations and analytics snapshots for dashboard/tracking/intelligence.
-- `lib/os/audit/*`
+- `lib/os-admin/audit/*`
   - Central audit logger with DB fallback strategy.
-- `lib/os/preferences/*`
+- `lib/os-admin/preferences/*`
   - User preferences defaults + persistence (DB + memory fallback).
-- `lib/os/realtime/*`
+- `lib/os-admin/realtime/*`
   - Domain event dispatcher, event listing, event -> notification mapping.
-- `lib/os/server/memory-store.ts`
+- `lib/os-admin/server/memory-store.ts`
   - In-memory fallback for orders/audit/events/preferences.
 
 ## 2) API endpoints
@@ -91,7 +91,7 @@ This lets UI stay operational while infra catches up.
 
 ## 6) Deep links
 
-Centralized in `lib/os/domain/query-filters.ts`:
+Centralized in `lib/os-admin/domain/query-filters.ts`:
 - `buildOrdersQuery`
 - `buildClientsQuery`
 - `buildPipelineQuery`
@@ -103,7 +103,7 @@ Used by orders/clients/pipeline/tracking/intelligence paths and realtime notific
 ## 7) Business rule guardrails
 
 Status transitions are enforced in:
-- `lib/os/domain/status-transition-guards.ts`
+- `lib/os-admin/domain/status-transition-guards.ts`
 
 Main flow:
 - `new -> to_confirm`
@@ -117,7 +117,7 @@ Main flow:
 - SQL migration baseline: `supabase/migrations/20260323_0001_os_backend_hardening.sql`
   - covers schema extensions, indexes, RLS, append-only safeguards, idempotency storage, realtime publication wiring.
 - API hardening completed on critical mutations:
-  - auth session token verification in middleware for `/os/*` and `/api/os/*`
+  - auth session token verification in middleware for `/os-admin/*` and `/api/os/*`
   - idempotency wrappers for status/confirm/cancel/settings/preferences/notifications/stock and key order actions.
 - Remaining production tasks:
   - add integration tests for critical routes (status lifecycle, settings/preferences, stock adjust, notifications read).

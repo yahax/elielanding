@@ -185,7 +185,7 @@ export function buildBusinessIntelligence(input: {
       impactLabel: "Impact produit",
       impactValue: impact,
       ctaLabel: "Ouvrir stock",
-      ctaHref: "/os/inventory",
+      ctaHref: "/os-admin/inventory",
       metricLabel: "Volume",
       metricValue: `${topPerfume.count}`,
     });
@@ -202,7 +202,7 @@ export function buildBusinessIntelligence(input: {
       impactLabel: "Risque de rupture",
       impactValue: pressure,
       ctaLabel: "Ajuster stock",
-      ctaHref: "/os/inventory",
+      ctaHref: "/os-admin/inventory",
       metricLabel: "SKU critiques",
       metricValue: `${input.overview.lowStockAlerts.length}`,
     });

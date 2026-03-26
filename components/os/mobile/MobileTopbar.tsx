@@ -19,15 +19,15 @@ type SearchResult = {
 };
 
 const PAGE_TITLES: Record<string, string> = {
-  "/os/control": "War Room",
-  "/os/orders": "Commandes",
-  "/os/pipeline": "Pipeline",
-  "/os/notifications": "Alertes",
-  "/os/clients": "Clients",
-  "/os/settings": "Paramètres",
-  "/os/intelligence": "Business Signals",
-  "/os/inventory": "Stock",
-  "/os/products": "Produits",
+  "/os-admin/control": "War Room",
+  "/os-admin/orders": "Commandes",
+  "/os-admin/pipeline": "Pipeline",
+  "/os-admin/notifications": "Alertes",
+  "/os-admin/clients": "Clients",
+  "/os-admin/settings": "Paramètres",
+  "/os-admin/intelligence": "Business Signals",
+  "/os-admin/inventory": "Stock",
+  "/os-admin/products": "Produits",
 };
 
 const RESULT_TYPE_LABELS: Record<string, string> = {
@@ -42,7 +42,7 @@ const RESULT_TYPE_LABELS: Record<string, string> = {
 
 function resolveTitle(pathname: string): string {
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
-  const key = Object.keys(PAGE_TITLES).find((candidate) => candidate !== "/os/control" && pathname.startsWith(candidate));
+  const key = Object.keys(PAGE_TITLES).find((candidate) => candidate !== "/os-admin/control" && pathname.startsWith(candidate));
   return key ? PAGE_TITLES[key] : "ELIE OS";
 }
 
@@ -179,7 +179,7 @@ export function MobileTopbar() {
 
           <div className="os-mobile-topbar-actions">
             {urgentCount > 0 ? (
-              <Link href="/os/orders?status=to_confirm" className="os-mobile-urgent-chip">
+              <Link href="/os-admin/orders?status=to_confirm" className="os-mobile-urgent-chip">
                 <TriangleAlert size={12} />
                 <span>{urgentCount}</span>
               </Link>
@@ -220,7 +220,7 @@ export function MobileTopbar() {
                     aria-selected={false}
                     className="os-mobile-search-result"
                     onClick={() => {
-                      router.push(result.href || "/os/control");
+                      router.push(result.href || "/os-admin/control");
                       setQuery("");
                       setResults([]);
                       setSearchOpen(false);

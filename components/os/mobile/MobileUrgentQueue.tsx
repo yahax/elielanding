@@ -16,7 +16,7 @@ export function MobileUrgentQueue({
     <section className="luxury-card os-mobile-urgent-card" style={{ padding: 12, borderRadius: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div style={{ fontSize: 12, fontWeight: 900, color: "var(--text)" }}>Mobile Urgent Queue</div>
-        <Link href="/os/orders?status=to_confirm" style={{ fontSize: 11, fontWeight: 800, color: "var(--gold)", textDecoration: "none" }}>
+        <Link href="/os-admin/orders?status=to_confirm" style={{ fontSize: 11, fontWeight: 800, color: "var(--gold)", textDecoration: "none" }}>
           Voir tout
         </Link>
       </div>
@@ -28,7 +28,7 @@ export function MobileUrgentQueue({
           {queue.map((order) => (
             <Link
               key={order.id}
-              href={`/os/orders?status=${order.status}`}
+              href={`/os-admin/orders?status=${order.status}`}
               className="os-mobile-urgent-row"
               style={{
                 border: "1px solid rgba(201,106,106,0.28)",

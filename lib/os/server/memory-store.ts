@@ -21,7 +21,6 @@ type OsMemoryStore = {
 };
 
 declare global {
-  // eslint-disable-next-line no-var
   var __elieOsMemoryStore: OsMemoryStore | undefined;
 }
 

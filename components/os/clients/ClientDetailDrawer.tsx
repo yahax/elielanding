@@ -247,7 +247,7 @@ export function ClientDetailDrawer({ open, customer, onClose, onAddNote, noteMut
               <Phone size={14} />
               Appeler
             </a>
-            <a href="/os/orders" className="btn-ghost btn-sm" style={{ textDecoration: "none", display: "inline-flex", justifyContent: "center" }}>
+            <a href="/os-admin/orders" className="btn-ghost btn-sm" style={{ textDecoration: "none", display: "inline-flex", justifyContent: "center" }}>
               <ShoppingBag size={13} />
               Commandes
             </a>

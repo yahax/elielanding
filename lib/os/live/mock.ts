@@ -71,7 +71,7 @@ export function generateNotificationDraftsFromOrders(params: {
           message: `${orderLabel} · ${cityLabel} · ${value} MAD`,
           severity: getDefaultSeverity("new_order"),
           category: getNotificationCategory("new_order"),
-          link: `/os/orders?status=new`,
+          link: `/os-admin/orders?status=new`,
           entityId: order.id,
           metadata: { source: order.source, value },
         });
@@ -89,7 +89,7 @@ export function generateNotificationDraftsFromOrders(params: {
             message: `${orderLabel} confirmée par l'équipe`,
             severity: getDefaultSeverity("order_confirmed"),
             category: getNotificationCategory("order_confirmed"),
-            link: `/os/orders?status=confirmed`,
+            link: `/os-admin/orders?status=confirmed`,
             entityId: order.id,
           });
           emittedKeys.add(key);
@@ -105,7 +105,7 @@ export function generateNotificationDraftsFromOrders(params: {
             message: `${orderLabel} a été annulée`,
             severity: getDefaultSeverity("order_canceled"),
             category: getNotificationCategory("order_canceled"),
-            link: `/os/orders?status=canceled`,
+            link: `/os-admin/orders?status=canceled`,
             entityId: order.id,
           });
           emittedKeys.add(key);
@@ -122,7 +122,7 @@ export function generateNotificationDraftsFromOrders(params: {
           message: `${orderLabel} dépasse le délai de traitement (${ageMinutes} min)`,
           severity: getDefaultSeverity("urgent_order"),
           category: getNotificationCategory("urgent_order"),
-          link: `/os/orders?status=to_confirm`,
+          link: `/os-admin/orders?status=to_confirm`,
           entityId: order.id,
           metadata: { ageMinutes, value },
         });
@@ -139,7 +139,7 @@ export function generateNotificationDraftsFromOrders(params: {
           message: `${orderLabel} attend une relance depuis ${Math.floor(ageMinutes / 60)}h`,
           severity: getDefaultSeverity("callback_overdue"),
           category: getNotificationCategory("callback_overdue"),
-          link: `/os/orders?status=callback`,
+          link: `/os-admin/orders?status=callback`,
           entityId: order.id,
           metadata: { ageMinutes },
         });
@@ -156,7 +156,7 @@ export function generateNotificationDraftsFromOrders(params: {
           message: `${orderLabel} · ${value} MAD à sécuriser rapidement`,
           severity: getDefaultSeverity("high_value_order"),
           category: getNotificationCategory("high_value_order"),
-          link: `/os/orders?status=to_confirm`,
+          link: `/os-admin/orders?status=to_confirm`,
           entityId: order.id,
           metadata: { value },
         });
@@ -174,7 +174,7 @@ export function generateNotificationDraftsFromOrders(params: {
           message: `${orderLabel} provient d'un client récurrent`,
           severity: getDefaultSeverity("vip_detected"),
           category: getNotificationCategory("vip_detected"),
-          link: `/os/orders?status=to_confirm`,
+          link: `/os-admin/orders?status=to_confirm`,
           entityId: order.id,
         });
         emittedKeys.add(key);
@@ -192,7 +192,7 @@ export function generateNotificationDraftsFromOrders(params: {
         message: `${lowStock.length} référence(s) proche(s) de la rupture`,
         severity: getDefaultSeverity("stock_critical"),
         category: getNotificationCategory("stock_critical"),
-        link: "/os/inventory",
+        link: "/os-admin/inventory",
         metadata: { products: lowStock.map((item) => item.name) },
       });
       emittedKeys.add(key);
@@ -209,7 +209,7 @@ export function generateNotificationDraftsFromOrders(params: {
         message: `Taux de confirmation bas (${confirmationRate}%)`,
         severity: getDefaultSeverity("conversion_anomaly"),
         category: getNotificationCategory("conversion_anomaly"),
-        link: "/os/intelligence",
+        link: "/os-admin/intelligence",
         metadata: { confirmationRate },
       });
       emittedKeys.add(key);

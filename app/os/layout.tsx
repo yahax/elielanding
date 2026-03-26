@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Manrope } from 'next/font/google';
 import '../globals.css';
-import './os.css';
+import './focus.css';
 import { OsLayoutClient } from '@/components/os/OsLayoutClient';
 
 const manrope = Manrope({
@@ -11,8 +11,8 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-    title: 'ELIE FOCUS OS 2026',
-    description: 'Interface Focus haute performance ELIE',
+    title: 'ELIE Focus OS',
+    description: 'Agent execution system',
 };
 
 export default function DashboardLayout({

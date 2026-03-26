@@ -17,6 +17,7 @@ import { DecisionInsightCard } from "@/components/os/intelligence/DecisionInsigh
 import { BusinessSignalGrid } from "@/components/os/intelligence/BusinessSignalGrid";
 
 type Timeframe = 7 | 30;
+type IntelligenceBundle = ReturnType<typeof buildBusinessIntelligence>;
 
 function IntelligencePageInner() {
   const router = useRouter();
@@ -37,7 +38,7 @@ function IntelligencePageInner() {
       setBundle({
         summary: response.snapshot.summary,
         insights: response.snapshot.insights,
-        groupedInsights: response.snapshot.groupedInsights as typeof bundle.groupedInsights,
+        groupedInsights: response.snapshot.groupedInsights as IntelligenceBundle["groupedInsights"],
         signals: response.snapshot.signals,
       });
     } catch (err: unknown) {
@@ -60,7 +61,7 @@ function IntelligencePageInner() {
   }, [searchParams]);
 
   useEffect(() => {
-    const href = buildTrackingQuery({ range: timeframe === 7 ? "7d" : "30d" }, "/os/intelligence");
+    const href = buildTrackingQuery({ range: timeframe === 7 ? "7d" : "30d" }, "/os-admin/intelligence");
     const query = href.includes("?") ? href.split("?")[1] ?? "" : "";
     if (query === lastQuery) return;
     setLastQuery(query);

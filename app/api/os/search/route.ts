@@ -47,7 +47,7 @@ export async function GET(req: Request) {
         id: order.id,
         title: order.customer_name || "Client inconnu",
         subtitle: `${order.city || "Ville inconnue"} • ${order.phone || "Sans téléphone"}`,
-        href: "/os/orders",
+        href: "/os-admin/orders",
         rank: 1,
       })),
       ...(perfumes || []).map((perfume) => ({
@@ -55,7 +55,7 @@ export async function GET(req: Request) {
         id: perfume.id,
         title: perfume.name,
         subtitle: `${perfume.gender || "mixte"} • ${perfume.tier || "classic"}`,
-        href: "/os/products",
+        href: "/os-admin/products",
         rank: 2,
       })),
     ]

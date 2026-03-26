@@ -197,17 +197,17 @@ function buildSafeOsApiFallback(request: NextRequest): NextResponse | null {
     return null;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
-    const isOsPage = pathname.startsWith('/os');
+    const isFocusPage = pathname === '/os' || pathname.startsWith('/os/');
+    const isAdminPage = pathname === '/os-admin' || pathname.startsWith('/os-admin/');
     const isOsApi = pathname.startsWith('/api/os');
+    const isProtectedPage = isFocusPage || isAdminPage;
 
-    // Protect OS pages and OS API routes.
-    if (!isOsPage && !isOsApi) {
+    if (!isProtectedPage && !isOsApi) {
         return NextResponse.next();
     }
 
-    // Allow login page and auth API routes through
     if (pathname === '/os/login' || pathname.startsWith('/os/login/')) {
         return NextResponse.next();
     }
@@ -245,5 +245,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/os/:path*', '/api/os/:path*'],
+    matcher: ['/os/:path*', '/os-admin/:path*', '/api/os/:path*'],
 };

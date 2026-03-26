@@ -78,7 +78,7 @@ export function CommandCenterHero({
                     Actualiser
                 </button>
 
-                <Link href="/os/orders?status=to_confirm" className="cc-hero-urgent-btn">
+                <Link href="/os-admin/orders?status=to_confirm" className="cc-hero-urgent-btn">
                     <span className="cc-hero-urgent-dot" />
                     Voir commandes urgentes
                     {pendingCount > 0 && (

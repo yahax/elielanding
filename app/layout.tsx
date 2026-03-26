@@ -35,8 +35,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html dir="ltr" lang="fr" className={`${notoKufi.variable} ${cormorant.variable}`}>
-      <body className="antialiased font-sans">
+    <html
+      dir="ltr"
+      lang="fr"
+      className={`${notoKufi.variable} ${cormorant.variable}`}
+      suppressHydrationWarning
+    >
+      {/* Browser extensions can inject DOM attributes in local dev before hydration. */}
+      <body className="antialiased font-sans" suppressHydrationWarning>
         {children}
       </body>
     </html>

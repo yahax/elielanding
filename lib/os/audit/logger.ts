@@ -20,14 +20,6 @@ function isMissingTableError(error: unknown): boolean {
   return code === "42P01" || code === "PGRST205" || code === "PGRST204";
 }
 
-function isUuidLike(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-function toEventUuid(entityId: string): string {
-  return isUuidLike(entityId) ? entityId : "00000000-0000-0000-0000-000000000000";
-}
-
 function mapDbRowToAuditLog(row: {
   id?: string;
   actor_id?: string;

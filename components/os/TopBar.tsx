@@ -25,52 +25,52 @@ type PageMeta = {
 };
 
 const PAGE_META: Record<string, PageMeta> = {
-    '/os/control': {
+    '/os-admin/control': {
         section: 'Control Center',
         title: 'Dashboard',
         subtitle: 'Vision globale des opérations',
     },
-    '/os/orders': {
+    '/os-admin/orders': {
         section: 'Operations',
         title: 'Commandes',
         subtitle: 'Priorités, relances et confirmations',
     },
-    '/os/pipeline': {
+    '/os-admin/pipeline': {
         section: 'Operations',
         title: 'Pipeline',
         subtitle: 'Charge et capacité en temps réel',
     },
-    '/os/inventory': {
+    '/os-admin/inventory': {
         section: 'Operations',
         title: 'Inventaire',
         subtitle: 'Suivi des niveaux critiques',
     },
-    '/os/products': {
+    '/os-admin/products': {
         section: 'Operations',
         title: 'Produits',
         subtitle: 'Catalogue, disponibilité et prix',
     },
-    '/os/clients': {
+    '/os-admin/clients': {
         section: 'Relations',
         title: 'Clients',
         subtitle: 'Segments, valeur et rétention',
     },
-    '/os/intelligence': {
+    '/os-admin/intelligence': {
         section: 'Insights',
         title: 'Business Signals',
         subtitle: 'Insights business actionnables',
     },
-    '/os/tracking': {
+    '/os-admin/tracking': {
         section: 'Insights',
         title: 'Tracking',
         subtitle: 'Performance acquisition & conversions',
     },
-    '/os/notifications': {
+    '/os-admin/notifications': {
         section: 'System',
         title: 'Notifications',
         subtitle: 'Flux live et événements critiques',
     },
-    '/os/settings': {
+    '/os-admin/settings': {
         section: 'System',
         title: 'Paramètres',
         subtitle: 'Préférences opérateur et système',
@@ -90,8 +90,8 @@ const RESULT_TYPE_LABELS: Record<string, string> = {
 function resolvePageMeta(pathname: string): PageMeta {
     if (PAGE_META[pathname]) return PAGE_META[pathname];
 
-    const path = Object.keys(PAGE_META).find((candidate) => candidate !== '/os/control' && pathname.startsWith(candidate));
-    if (!path) return PAGE_META['/os/control'];
+    const path = Object.keys(PAGE_META).find((candidate) => candidate !== '/os-admin/control' && pathname.startsWith(candidate));
+    if (!path) return PAGE_META['/os-admin/control'];
 
     return PAGE_META[path];
 }
@@ -284,7 +284,7 @@ export function TopBar() {
                                         role="option"
                                         aria-selected={false}
                                         onClick={() => {
-                                            router.push(result.href || '/os/control');
+                                            router.push(result.href || '/os-admin/control');
                                             setQuery('');
                                             setResults([]);
                                             setSearchOpen(false);
@@ -315,7 +315,7 @@ export function TopBar() {
                     <RefreshCw size={15} className={refreshing ? 'animate-spin' : undefined} />
                 </button>
 
-                <Link href="/os/orders?status=to_confirm" className="os-topbar-priority-link">
+                <Link href="/os-admin/orders?status=to_confirm" className="os-topbar-priority-link">
                     <Sparkles size={13} />
                     <span>Priorités</span>
                     {unreadCount > 0 ? <span className="os-topbar-priority-count">{unreadLabel}</span> : null}

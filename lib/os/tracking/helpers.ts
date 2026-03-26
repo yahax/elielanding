@@ -217,7 +217,7 @@ function buildNarratives(input: {
       body: `${topProduct.orders} commandes et ${topProduct.confirmationRate}% de confirmation. Ajouter des relances ciblées sur ce produit est recommandé.`,
       tone: "gold",
       ctaLabel: "Voir produit/pack",
-      ctaHref: "/os/products",
+      ctaHref: "/os-admin/products",
     });
   }
 
@@ -228,7 +228,7 @@ function buildNarratives(input: {
       body: `${input.cancellationRate}% d'annulation observé. Réduire ce taux est prioritaire avant d'augmenter le volume d'acquisition.`,
       tone: "danger",
       ctaLabel: "Ouvrir intelligence",
-      ctaHref: "/os/intelligence",
+      ctaHref: "/os-admin/intelligence",
     });
   }
 

@@ -37,25 +37,25 @@ interface NavSectionConfig {
 const NAV_SECTIONS: NavSectionConfig[] = [
     {
         label: 'Pilotage',
-        items: [{ label: 'Dashboard', href: '/os/control', icon: LayoutDashboard, subtitle: 'Vue d’ensemble business' }],
+        items: [{ label: 'Dashboard', href: '/os-admin/control', icon: LayoutDashboard, subtitle: 'Vue d’ensemble business' }],
     },
     {
         label: 'Opérations',
         items: [
-            { label: 'Commandes', href: '/os/orders', icon: ShoppingCart, subtitle: 'Flux & priorisation' },
-            { label: 'Pipeline', href: '/os/pipeline', icon: GitBranch, subtitle: 'Capacité en temps réel' },
-            { label: 'Inventaire', href: '/os/inventory', icon: Package, subtitle: 'Niveaux & alertes stock' },
-            { label: 'Produits', href: '/os/products', icon: Archive, subtitle: 'Catalogue premium' },
-            { label: 'Clients', href: '/os/clients', icon: Users, subtitle: 'Segments & valeur client' },
+            { label: 'Commandes', href: '/os-admin/orders', icon: ShoppingCart, subtitle: 'Flux & priorisation' },
+            { label: 'Pipeline', href: '/os-admin/pipeline', icon: GitBranch, subtitle: 'Capacité en temps réel' },
+            { label: 'Inventaire', href: '/os-admin/inventory', icon: Package, subtitle: 'Niveaux & alertes stock' },
+            { label: 'Produits', href: '/os-admin/products', icon: Archive, subtitle: 'Catalogue premium' },
+            { label: 'Clients', href: '/os-admin/clients', icon: Users, subtitle: 'Segments & valeur client' },
         ],
     },
     {
         label: 'Intelligence',
         items: [
-            { label: 'Business Signals', href: '/os/intelligence', icon: Brain, subtitle: 'Insights actionnables' },
-            { label: 'Tracking', href: '/os/tracking', icon: Radio, subtitle: 'Performance acquisition' },
-            { label: 'Notifications', href: '/os/notifications', icon: Bell, subtitle: 'Événements système' },
-            { label: 'Paramètres', href: '/os/settings', icon: Settings, subtitle: 'Préférences opérateur' },
+            { label: 'Business Signals', href: '/os-admin/intelligence', icon: Brain, subtitle: 'Insights actionnables' },
+            { label: 'Tracking', href: '/os-admin/tracking', icon: Radio, subtitle: 'Performance acquisition' },
+            { label: 'Notifications', href: '/os-admin/notifications', icon: Bell, subtitle: 'Événements système' },
+            { label: 'Paramètres', href: '/os-admin/settings', icon: Settings, subtitle: 'Préférences opérateur' },
         ],
     },
 ];
@@ -70,7 +70,7 @@ function NavSection({ label, items, pathname }: { label: string; items: NavItem[
 
             <div className="os-sidebar-section-items">
                 {items.map((item) => {
-                    const isActive = item.href === '/os/control' ? pathname === '/os/control' : pathname.startsWith(item.href);
+                    const isActive = item.href === '/os-admin/control' ? pathname === '/os-admin/control' : pathname.startsWith(item.href);
                     return (
                         <SidebarNavItem
                             key={item.href}
@@ -99,7 +99,7 @@ export function Sidebar() {
         return NAV_SECTIONS.map((section) => ({
             ...section,
             items: section.items.map((item) =>
-                item.href === '/os/notifications' && unreadCount > 0 ? { ...item, badge: unreadBadge } : item,
+                item.href === '/os-admin/notifications' && unreadCount > 0 ? { ...item, badge: unreadBadge } : item,
             ),
         }));
     }, [unreadCount]);

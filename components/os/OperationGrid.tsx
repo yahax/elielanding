@@ -16,10 +16,10 @@ interface OperationLink {
 }
 
 const OPERATION_LINKS: OperationLink[] = [
-    { href: '/os/orders', label: 'Confirmation Rapide', sub: 'Traiter le flux entrant', variant: 'ghost' },
-    { href: '/os/pipeline', label: 'Suivi Logistique', sub: 'Contrôle des expéditions', variant: 'ghost' },
-    { href: '/os/products', label: 'Gestion Catalogue', sub: 'Mise à jour collections', variant: 'primary' },
-    { href: '/os/inventory', label: 'Stocks & Alerts', sub: 'Inventaire Maison', variant: 'ghost' },
+    { href: '/os-admin/orders', label: 'Confirmation Rapide', sub: 'Traiter le flux entrant', variant: 'ghost' },
+    { href: '/os-admin/pipeline', label: 'Suivi Logistique', sub: 'Contrôle des expéditions', variant: 'ghost' },
+    { href: '/os-admin/products', label: 'Gestion Catalogue', sub: 'Mise à jour collections', variant: 'primary' },
+    { href: '/os-admin/inventory', label: 'Stocks & Alerts', sub: 'Inventaire Maison', variant: 'ghost' },
 ];
 
 export function OperationGrid({ toConfirm, stockAlerts }: PriorityCountsProps) {

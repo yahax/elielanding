@@ -120,7 +120,7 @@ export function NotificationBell({
           )}
 
           <Link
-            href="/os/notifications"
+            href="/os-admin/notifications"
             onClick={() => setOpen(false)}
             style={{ display: "inline-block", marginTop: 10, fontSize: 12, fontWeight: 900, color: "var(--gold)", textDecoration: "none" }}
           >

@@ -59,7 +59,7 @@ export function mapDomainEventToNotificationDraft(event: DomainEvent): Notificat
         message: event.label,
         severity: "warning",
         category: "stock",
-        link: "/os/inventory",
+        link: "/os-admin/inventory",
         entityId: event.entityId,
         metadata: event.payload,
       };
@@ -70,7 +70,7 @@ export function mapDomainEventToNotificationDraft(event: DomainEvent): Notificat
         message: event.label,
         severity: "info",
         category: "operators",
-        link: "/os/notifications",
+        link: "/os-admin/notifications",
         entityId: event.entityId,
         metadata: event.payload,
       };
@@ -81,7 +81,7 @@ export function mapDomainEventToNotificationDraft(event: DomainEvent): Notificat
         message: event.label,
         severity: "info",
         category: "system",
-        link: "/os/settings",
+        link: "/os-admin/settings",
         entityId: event.entityId,
         metadata: event.payload,
       };
@@ -92,7 +92,7 @@ export function mapDomainEventToNotificationDraft(event: DomainEvent): Notificat
         message: event.label,
         severity: "info",
         category: "operators",
-        link: "/os/notifications",
+        link: "/os-admin/notifications",
         entityId: event.entityId,
         metadata: event.payload,
       };

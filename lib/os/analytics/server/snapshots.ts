@@ -29,13 +29,6 @@ function groupOrdersByDay(orders: NormalizedOrder[]): Map<string, NormalizedOrde
   return map;
 }
 
-function buildTopRows(counter: Map<string, number>, limit = 5): Array<{ label: string; value: number }> {
-  return [...counter.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([label, value]) => ({ label, value }));
-}
-
 function buildOverviewFromOrders(
   orders: NormalizedOrder[],
   lowStockAlerts: OverviewResponse["lowStockAlerts"]

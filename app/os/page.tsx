@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import { FocusOsApp } from "@/components/os/focus/FocusOsApp";
 
 export default function FocusOsPage() {
-  return <FocusOsApp />;
+  return (
+    <Suspense fallback={null}>
+      <FocusOsApp />
+    </Suspense>
+  );
 }

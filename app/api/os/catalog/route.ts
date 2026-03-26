@@ -173,7 +173,7 @@ export async function POST(req: Request) {
           productName: perfume.name,
           stock: initialStock,
           lowStockThreshold: initialThreshold,
-          link: "/os/inventory",
+          link: "/os-admin/inventory",
         },
       });
     }
@@ -352,7 +352,7 @@ export async function PATCH(req: Request) {
                 productName,
                 stock: nextStock,
                 lowStockThreshold: nextThreshold,
-                link: "/os/inventory",
+                link: "/os-admin/inventory",
               },
             });
           }

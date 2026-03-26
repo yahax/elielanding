@@ -113,7 +113,7 @@ export interface TrackingDeepLinkFilters {
   source?: string;
 }
 
-export function buildOrdersQuery(filters: OrdersDeepLinkFilters, basePath = "/os/orders"): string {
+export function buildOrdersQuery(filters: OrdersDeepLinkFilters, basePath = "/os-admin/orders"): string {
   const params = new URLSearchParams();
   pushString(params, "q", filters.search);
   pushList(params, "status", filters.statuses);
@@ -167,7 +167,7 @@ export function parseOrdersFiltersFromSearchParams(searchParams: SearchParamInpu
   };
 }
 
-export function buildClientsQuery(filters: ClientsDeepLinkFilters, basePath = "/os/clients"): string {
+export function buildClientsQuery(filters: ClientsDeepLinkFilters, basePath = "/os-admin/clients"): string {
   const params = new URLSearchParams();
   pushString(params, "q", filters.search);
   pushString(params, "segment", filters.segment);
@@ -194,7 +194,7 @@ export function parseClientsFiltersFromSearchParams(searchParams: SearchParamInp
   };
 }
 
-export function buildPipelineQuery(filters: PipelineDeepLinkFilters, basePath = "/os/pipeline"): string {
+export function buildPipelineQuery(filters: PipelineDeepLinkFilters, basePath = "/os-admin/pipeline"): string {
   const params = new URLSearchParams();
   pushString(params, "q", filters.search);
   pushString(params, "source", filters.source);
@@ -225,7 +225,7 @@ export function parsePipelineFiltersFromSearchParams(searchParams: SearchParamIn
   };
 }
 
-export function buildTrackingQuery(filters: TrackingDeepLinkFilters, basePath = "/os/tracking"): string {
+export function buildTrackingQuery(filters: TrackingDeepLinkFilters, basePath = "/os-admin/tracking"): string {
   const params = new URLSearchParams();
   pushString(params, "range", filters.range);
   pushString(params, "source", filters.source);

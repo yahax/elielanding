@@ -66,7 +66,7 @@ export const STATIC_QUICK_ACTIONS: QuickAction[] = [
         id: 'stock',
         label: 'Ajuster stock',
         sub: 'Inventaire opérationnel',
-        href: '/os/inventory',
+        href: '/os-admin/inventory',
         icon: 'stock',
         variant: 'default',
     },
@@ -74,7 +74,7 @@ export const STATIC_QUICK_ACTIONS: QuickAction[] = [
         id: 'intelligence',
         label: 'Voir intelligence',
         sub: 'Analyses & diagnostics',
-        href: '/os/intelligence',
+        href: '/os-admin/intelligence',
         icon: 'intelligence',
         variant: 'ghost',
     },
@@ -82,7 +82,7 @@ export const STATIC_QUICK_ACTIONS: QuickAction[] = [
         id: 'product-create',
         label: 'Créer produit',
         sub: 'Enrichir le catalogue',
-        href: '/os/products',
+        href: '/os-admin/products',
         icon: 'product',
         variant: 'ghost',
     },
@@ -293,8 +293,8 @@ function buildAlerts(params: {
             urgency: deriveUrgency(params.lowStockCount, 1, 3, 5),
             description: 'Produits proches de la rupture impactant les confirmations.',
             meta: 'Réapprovisionnement prioritaire',
-            primaryAction: { label: 'Ajuster stock', href: '/os/inventory' },
-            sectionHref: '/os/inventory',
+            primaryAction: { label: 'Ajuster stock', href: '/os-admin/inventory' },
+            sectionHref: '/os-admin/inventory',
         },
         {
             id: 'alert-high-value',
@@ -316,8 +316,8 @@ function buildAlerts(params: {
             urgency: deriveUrgency(params.anomalyCount, 1, 2, 3),
             description: `Taux d'annulation actuel: ${params.cancellationRate}% sur la période.`,
             meta: 'Diagnostic recommandé',
-            primaryAction: { label: 'Analyser causes', href: '/os/intelligence' },
-            sectionHref: '/os/intelligence',
+            primaryAction: { label: 'Analyser causes', href: '/os-admin/intelligence' },
+            sectionHref: '/os-admin/intelligence',
         },
     ];
 }
@@ -353,7 +353,7 @@ function buildInsights(params: {
             metric: params.topCity ? `${params.topCityCount ?? 0} cmd` : 'n/a',
             cta: {
                 label: 'Explorer villes',
-                href: params.topCity ? buildOrdersQuery({ cities: [params.topCity] }) : '/os/intelligence',
+                href: params.topCity ? buildOrdersQuery({ cities: [params.topCity] }) : '/os-admin/intelligence',
             },
         },
         {
@@ -364,7 +364,7 @@ function buildInsights(params: {
                 ? `${params.topProductCount ?? 0} ventes détectées. Renforcer stock + scripts de confirmation sur ce parfum.`
                 : 'Le top produit apparaîtra automatiquement quand la donnée produit est suffisante.',
             metric: params.topProduct ? `${params.topProductCount ?? 0} ventes` : 'n/a',
-            cta: { label: 'Voir catalogue', href: '/os/products' },
+            cta: { label: 'Voir catalogue', href: '/os-admin/products' },
         },
         {
             id: 'insight-source',
@@ -376,7 +376,7 @@ function buildInsights(params: {
             metric: params.topSourceLabel ? `${params.topSourceCount ?? 0} cmd` : 'n/a',
             cta: {
                 label: 'Voir intelligence',
-                href: params.topSourceKey ? buildTrackingQuery({ source: params.topSourceKey }) : '/os/intelligence',
+                href: params.topSourceKey ? buildTrackingQuery({ source: params.topSourceKey }) : '/os-admin/intelligence',
             },
         },
         {
@@ -387,7 +387,7 @@ function buildInsights(params: {
                 ? `${params.peakHourVolume ?? 0} commandes observées. Renforcer présence opérateur sur ce créneau.`
                 : 'Les heures fortes seront suggérées dès que le trafic journalier augmente.',
             metric: params.peakHour ? `${params.peakHourVolume ?? 0} cmd` : 'n/a',
-            cta: { label: 'Ajuster staffing', href: '/os/settings' },
+            cta: { label: 'Ajuster staffing', href: '/os-admin/settings' },
         },
         {
             id: 'insight-cancel-risk',
@@ -395,7 +395,7 @@ function buildInsights(params: {
             title: 'Risque d\'annulation',
             body: `Le taux d'annulation est à ${params.cancellationRate}%. Au-delà de 15%, la marge et le cashflow sont sous pression.`,
             metric: `${params.cancellationRate}%`,
-            cta: { label: 'Réduire le risque', href: '/os/intelligence' },
+            cta: { label: 'Réduire le risque', href: '/os-admin/intelligence' },
         },
         {
             id: 'insight-improvement-zone',
@@ -417,7 +417,7 @@ function buildInsights(params: {
             metric: params.highValueUnconfirmed > 0
                 ? `${params.highValueUnconfirmed} VIP en attente`
                 : `${formatMad(params.avgBasket)} MAD`,
-            cta: { label: 'Passer à l\'action', href: '/os/inventory' },
+            cta: { label: 'Passer à l\'action', href: '/os-admin/inventory' },
         },
     ];
 }
@@ -505,7 +505,7 @@ export function buildKpis(data: OverviewResponse, range: 7 | 30): DashboardKpi[]
                 value: confirmationRate >= 70 ? 'solide' : 'à optimiser',
                 tone: confirmationRate >= 70 ? 'good' : 'warning',
             },
-            cta: { label: 'Analyser', href: '/os/intelligence' },
+            cta: { label: 'Analyser', href: '/os-admin/intelligence' },
         },
         {
             id: 'kpi-revenue',
@@ -535,7 +535,7 @@ export function buildKpis(data: OverviewResponse, range: 7 | 30): DashboardKpi[]
                 value: lowStockCount > 0 ? 'risque actif' : 'safe',
                 tone: lowStockCount > 0 ? 'warning' : 'good',
             },
-            cta: { label: 'Inventaire', href: '/os/inventory' },
+            cta: { label: 'Inventaire', href: '/os-admin/inventory' },
         },
         {
             id: 'kpi-top-city',
@@ -551,7 +551,7 @@ export function buildKpis(data: OverviewResponse, range: 7 | 30): DashboardKpi[]
             },
             cta: {
                 label: 'Détails villes',
-                href: topCity ? buildOrdersQuery({ cities: [topCity.city] }) : '/os/intelligence',
+                href: topCity ? buildOrdersQuery({ cities: [topCity.city] }) : '/os-admin/intelligence',
             },
         },
         {
@@ -566,7 +566,7 @@ export function buildKpis(data: OverviewResponse, range: 7 | 30): DashboardKpi[]
                 value: topPerfume ? `${topPerfume.count}x` : 'n/a',
                 tone: 'accent',
             },
-            cta: { label: 'Voir produits', href: '/os/products' },
+            cta: { label: 'Voir produits', href: '/os-admin/products' },
         },
     ];
 }

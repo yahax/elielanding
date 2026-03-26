@@ -18,14 +18,18 @@ const loginSchema = z.object({
   actorId: z.string().trim().min(1).max(120).optional(),
 });
 
-
-
 export async function POST(req: NextRequest) {
   try {
     const payload = loginSchema.parse(await req.json());
     const envCheck = validateOsAuthEnv();
     if (!envCheck.valid) {
-      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: "Server configuration error",
+          missing: envCheck.issues,
+        },
+        { status: 500 }
+      );
     }
 
     const expectedPassword = envCheck.elieOsPassword;

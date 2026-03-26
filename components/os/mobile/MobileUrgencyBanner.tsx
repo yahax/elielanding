@@ -37,7 +37,7 @@ export function MobileUrgencyBanner({
         </div>
       </div>
 
-      <Link href="/os/orders?status=to_confirm" className="btn btn-primary btn-sm" style={{ textDecoration: "none", height: 34 }}>
+      <Link href="/os-admin/orders?status=to_confirm" className="btn btn-primary btn-sm" style={{ textDecoration: "none", height: 34 }}>
         Traiter
       </Link>
     </div>
