@@ -19,7 +19,7 @@ type SearchResult = {
 };
 
 const PAGE_TITLES: Record<string, string> = {
-  "/os": "War Room",
+  "/os/control": "War Room",
   "/os/orders": "Commandes",
   "/os/pipeline": "Pipeline",
   "/os/notifications": "Alertes",
@@ -42,7 +42,7 @@ const RESULT_TYPE_LABELS: Record<string, string> = {
 
 function resolveTitle(pathname: string): string {
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
-  const key = Object.keys(PAGE_TITLES).find((candidate) => candidate !== "/os" && pathname.startsWith(candidate));
+  const key = Object.keys(PAGE_TITLES).find((candidate) => candidate !== "/os/control" && pathname.startsWith(candidate));
   return key ? PAGE_TITLES[key] : "ELIE OS";
 }
 
@@ -220,7 +220,7 @@ export function MobileTopbar() {
                     aria-selected={false}
                     className="os-mobile-search-result"
                     onClick={() => {
-                      router.push(result.href || "/os");
+                      router.push(result.href || "/os/control");
                       setQuery("");
                       setResults([]);
                       setSearchOpen(false);

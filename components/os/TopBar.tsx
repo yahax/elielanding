@@ -25,7 +25,7 @@ type PageMeta = {
 };
 
 const PAGE_META: Record<string, PageMeta> = {
-    '/os': {
+    '/os/control': {
         section: 'Control Center',
         title: 'Dashboard',
         subtitle: 'Vision globale des opérations',
@@ -90,8 +90,8 @@ const RESULT_TYPE_LABELS: Record<string, string> = {
 function resolvePageMeta(pathname: string): PageMeta {
     if (PAGE_META[pathname]) return PAGE_META[pathname];
 
-    const path = Object.keys(PAGE_META).find((candidate) => candidate !== '/os' && pathname.startsWith(candidate));
-    if (!path) return PAGE_META['/os'];
+    const path = Object.keys(PAGE_META).find((candidate) => candidate !== '/os/control' && pathname.startsWith(candidate));
+    if (!path) return PAGE_META['/os/control'];
 
     return PAGE_META[path];
 }
@@ -284,7 +284,7 @@ export function TopBar() {
                                         role="option"
                                         aria-selected={false}
                                         onClick={() => {
-                                            router.push(result.href || '/os');
+                                            router.push(result.href || '/os/control');
                                             setQuery('');
                                             setResults([]);
                                             setSearchOpen(false);

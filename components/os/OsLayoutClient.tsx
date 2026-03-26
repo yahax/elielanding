@@ -14,6 +14,7 @@ import { useOsLiveStore } from "@/store/useOsLiveStore";
 export function OsLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLoginPage = pathname === "/os/login";
+  const isFocusPage = pathname === "/os";
   const isMobile = useIsMobile(1024);
   const settings = useOsLiveStore((state) => state.settings);
   const warRoomPreference = useOsLiveStore((state) => state.warRoomPreference);
@@ -74,6 +75,16 @@ export function OsLayoutClient({ children }: { children: React.ReactNode }) {
 
   if (isLoginPage) {
     return <div className="dashboard-body">{children}</div>;
+  }
+
+  if (isFocusPage) {
+    return (
+      <div className="dashboard-body" dir="ltr">
+        <OsRealtimeBridge />
+        <LiveToaster />
+        {children}
+      </div>
+    );
   }
 
   if (isMobile) {

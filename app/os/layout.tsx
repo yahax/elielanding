@@ -11,8 +11,8 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-    title: 'ELIE OS — Dashboard',
-    description: 'Système de gestion ELIE Parfum',
+    title: 'ELIE FOCUS OS 2026',
+    description: 'Interface Focus haute performance ELIE',
 };
 
 export default function DashboardLayout({

@@ -37,7 +37,7 @@ interface NavSectionConfig {
 const NAV_SECTIONS: NavSectionConfig[] = [
     {
         label: 'Pilotage',
-        items: [{ label: 'Dashboard', href: '/os', icon: LayoutDashboard, subtitle: 'Vue d’ensemble business' }],
+        items: [{ label: 'Dashboard', href: '/os/control', icon: LayoutDashboard, subtitle: 'Vue d’ensemble business' }],
     },
     {
         label: 'Opérations',
@@ -70,7 +70,7 @@ function NavSection({ label, items, pathname }: { label: string; items: NavItem[
 
             <div className="os-sidebar-section-items">
                 {items.map((item) => {
-                    const isActive = item.href === '/os' ? pathname === '/os' : pathname.startsWith(item.href);
+                    const isActive = item.href === '/os/control' ? pathname === '/os/control' : pathname.startsWith(item.href);
                     return (
                         <SidebarNavItem
                             key={item.href}
